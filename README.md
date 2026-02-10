@@ -2,7 +2,7 @@
 
 > [中文版本 (Chinese Version)](./README_zh.md)
 
-> **Version**: 1.5.0
+> **Version**: 1.6.0
 > **Purpose**: Help Claude AI understand and use mapv-cloudrenderengine (Baidu Maps Cloud Rendering Engine) for 3D digital twin visualization development
 
 ---
@@ -75,6 +75,67 @@ Claude will automatically activate this skill when developers ask about:
 
 ## How to Use This Skill
 
+### Installation
+
+#### Step 1: Clone the Repository
+
+```bash
+# Using SSH (recommended)
+git clone git@github.com:baidu-maps/unreal-sdk-skills.git
+
+# Or using HTTPS
+git clone https://github.com/baidu-maps/unreal-sdk-skills.git
+```
+
+#### Step 2: Copy Skill to Configuration Directory
+
+**Option A: Configure as Global Skill (Recommended)**
+
+Copy the Skill to the `.claude/skills/` directory under your home folder, making it available for all projects:
+
+```bash
+# Create global skills directory (if not exists)
+mkdir -p ~/.claude/skills
+
+# Copy cloudrenderengine skill
+cp -r unreal-sdk-skills/.claude/skills/cloudrenderengine ~/.claude/skills/
+```
+
+**Option B: Configure as Project-Level Skill**
+
+Copy the Skill to a specific project's `.claude/skills/` directory, making it available only for that project:
+
+```bash
+# Navigate to your project directory
+cd /path/to/your-project
+
+# Create project skills directory (if not exists)
+mkdir -p .claude/skills
+
+# Copy cloudrenderengine skill
+cp -r /path/to/unreal-sdk-skills/.claude/skills/cloudrenderengine .claude/skills/
+```
+
+#### Step 3: Verify Installation
+
+After installation, the directory structure should look like:
+
+```
+~/.claude/skills/                    # Global configuration
+└── cloudrenderengine/
+    ├── SKILL.md                     # Core knowledge base
+    ├── examples/                    # Code examples
+    └── references/                  # Reference documentation
+
+# Or
+
+your-project/.claude/skills/         # Project-level configuration
+└── cloudrenderengine/
+    ├── SKILL.md
+    ├── examples/
+    └── references/
+```
+
 ### Activation
 
 Simply mention relevant keywords in the conversation, and Claude will automatically use this skill. No special commands required.
@@ -146,7 +207,7 @@ and add autonomous vehicle trajectory playback"
 #### Class Inheritance
 ```
 EventDispatcher
-  └── Object3D (add, remove, dispose)
+  └── Object3D (add, remove, removeFromScene)
         └── Shape (setData, setStyle, update)
               ├── Point series (IconPoint, TextPoint, BasicLabel, ClusterPoint)
               ├── Line series (Line, ODLine, MeasureLine)
@@ -155,9 +216,8 @@ EventDispatcher
 
 #### Lifecycle Methods
 - `setData()`: Set/update data
-- `setStyle()`: Set/update style
-- `update()`: Apply changes and re-render
-- `dispose()`: Destroy object and release resources
+- `addToScene()`: Add Object to Scene
+- `removeFromScene()`: Destroy object and release resources
 
 ---
 

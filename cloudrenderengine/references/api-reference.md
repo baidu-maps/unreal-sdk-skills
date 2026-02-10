@@ -9,7 +9,6 @@ npm install mapv-cloudrenderengine
 ```javascript
 import * as Engine from 'mapv-cloudrenderengine';
 import { CloudRenderEngine, Line, IconPoint } from 'mapv-cloudrenderengine';
-
 ```
 
 ## 导出类清单
@@ -173,8 +172,6 @@ engine.destoryObject(object);
 // 移除对象 (等同于 destoryObject)
 engine.removeFromScene(object);
 
-// 移除所有场景中的物体
-engine.removeAllFromScene();
 
 // 遍历场景对象
 engine.scene.traverse((obj) => {

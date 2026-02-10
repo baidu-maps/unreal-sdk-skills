@@ -1,6 +1,6 @@
 # CloudRenderEngine Skill for Claude
 
-> **Version**: 1.5.0
+> **Version**: 1.6.0
 > **Purpose**: 帮助 Claude AI 理解和使用 mapv-cloudrenderengine（百度地图云渲染引擎）进行 3D 数字孪生可视化开发
 
 ---
@@ -73,6 +73,67 @@
 
 ## 如何使用这个 Skill
 
+### 安装配置
+
+#### 第一步：克隆仓库
+
+```bash
+# 使用 SSH（推荐）
+git clone git@github.com:baidu-maps/unreal-sdk-skills.git
+
+# 或使用 HTTPS
+git clone https://github.com/baidu-maps/unreal-sdk-skills.git
+```
+
+#### 第二步：复制 Skill 到配置目录
+
+**方式一：配置为全局 Skill（推荐）**
+
+将 Skill 复制到用户目录下的 `.claude/skills/`，所有项目都可使用：
+
+```bash
+# 创建全局 skills 目录（如果不存在）
+mkdir -p ~/.claude/skills
+
+# 复制 cloudrenderengine skill
+cp -r unreal-sdk-skills/.claude/skills/cloudrenderengine ~/.claude/skills/
+```
+
+**方式二：配置为项目级 Skill**
+
+将 Skill 复制到具体项目的 `.claude/skills/` 目录，仅该项目可使用：
+
+```bash
+# 进入你的项目目录
+cd /path/to/your-project
+
+# 创建项目 skills 目录（如果不存在）
+mkdir -p .claude/skills
+
+# 复制 cloudrenderengine skill
+cp -r /path/to/unreal-sdk-skills/.claude/skills/cloudrenderengine .claude/skills/
+```
+
+#### 第三步：验证安装
+
+安装完成后，目录结构应如下：
+
+```
+~/.claude/skills/                    # 全局配置
+└── cloudrenderengine/
+    ├── SKILL.md                     # 核心知识库
+    ├── examples/                    # 代码示例
+    └── references/                  # 参考文档
+
+# 或
+
+your-project/.claude/skills/         # 项目级配置
+└── cloudrenderengine/
+    ├── SKILL.md
+    ├── examples/
+    └── references/
+```
+
 ### 触发方式
 
 直接在对话中提及相关关键词，Claude 会自动使用这个 skill。无需特殊命令。
@@ -144,7 +205,7 @@
 #### 类继承关系
 ```
 EventDispatcher
-  └── Object3D (add, remove, dispose)
+  └── Object3D (add, remove)
         └── Shape (setData, setStyle, update)
               ├── Point 系列 (IconPoint, TextPoint, BasicLabel, ClusterPoint)
               ├── Line 系列 (Line, ODLine, MeasureLine)
@@ -153,9 +214,8 @@ EventDispatcher
 
 #### 生命周期方法
 - `setData()`: 设置/更新数据
-- `setStyle()`: 设置/更新样式
-- `update()`: 应用更改并重新渲染
-- `dispose()`: 销毁对象释放资源
+- `addToScene()`: 对象添加到场景
+- `removeFromScene()`: 对象从场景移除
 
 ---
 
