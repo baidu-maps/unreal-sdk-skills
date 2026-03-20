@@ -1,4 +1,4 @@
-# CloudRenderEngine Skill for Claude
+# CloudRenderEngine Skill
 
 > [中文版本 (Chinese Version)](./README_zh.md)
 
