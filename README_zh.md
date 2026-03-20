@@ -1,4 +1,4 @@
-# CloudRenderEngine Skill for Claude
+# CloudRenderEngine Skill
 
 > **Version**: 1.6.0
 > **Purpose**: 帮助 Claude AI 理解和使用 mapv-cloudrenderengine（百度地图云渲染引擎）进行 3D 数字孪生可视化开发
