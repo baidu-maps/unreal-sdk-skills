@@ -33,7 +33,7 @@ const extrudedPolygon = new Polygon({
     fillStyle: 'Empty',
     color: { r: 0.5, g: 0.5, b: 1 },
     opacity: 0.8,
-    height: 50,                      // 拉伸高度 (米)
+    // 注意: Polygon 不支持 height 拉伸参数，3D拉伸效果通过 GeoJSON features 中的 z 坐标控制
 });
 
 // 设置多边形数据 (必须闭合)
@@ -64,7 +64,10 @@ engine.addToScene(polygon);
 | `color` | object | - | 颜色 {r,g,b} |
 | `opacity` | number | - | 透明度 (0-1) |
 | `brightness` | number | - | 发光强度 |
-| `height` | number | - | 拉伸高度 (米) |
+| `speedX` | number | - | 纹理U方向移动速度 (默认0.25) |
+| `speedY` | number | - | 纹理V方向移动速度 (默认0.25) |
+| `rotateAngle` | number | - | 纹理旋转角度 0~1 (默认0) |
+| `tile` | number | - | 纹理平铺密度 (默认0.5) |
 | `map` | string | - | 贴图纹理 |
 
 **填充样式说明:**
@@ -357,82 +360,72 @@ engine.addToScene(decal);
 ```javascript
 import { Heatmap } from 'mapv-cloudrenderengine';
 
-// 平面热力图
-const planeHeatmap = new Heatmap({
-    type: 'plane',
-    radius: 30,                      // 影响半径
-    intensity: 1,                    // 强度
-});
-
-// 粒子热力图 (3D效果)
-const particleHeatmap = new Heatmap({
-    type: 'particle',
-    radius: 25,
-    intensity: 0.8,
-    maxIntensity: 2,
-});
-
-// 自定义颜色梯度
-const customHeatmap = new Heatmap({
-    type: 'plane',
-    radius: 40,
-    intensity: 1,
+// 基础热力图 (texture类型)
+const heatmap = new Heatmap({
+    kind: 'texture',                 // 热力图类型: texture/cube/cone/particle
+    width: 512,                      // 画布宽 (像素)
+    height: 512,                     // 画布高 (像素)
+    radius: 40,                      // 每个点的作用范围
+    blur: 0.85,                      // 模糊度
+    opacity: 0.5,
+    min: 0,                          // 数据最小值
+    max: 100,                        // 数据最大值
+    // 数据直接在构造时传入
+    data: [
+        { longitude: 116.404, latitude: 39.915, value: 80 },
+        { longitude: 116.405, latitude: 39.915, value: 60 },
+        { longitude: 116.404, latitude: 39.916, value: 40 },
+    ],
+    // 渐变色配置 (使用CSS颜色字符串，particle类型无效)
     gradient: {
-        0.0: { r: 0, g: 0, b: 1 },    // 蓝色 (低)
-        0.5: { r: 0, g: 1, b: 0 },    // 绿色 (中)
-        1.0: { r: 1, g: 0, b: 0 },    // 红色 (高)
+        0.25: 'rgb(0,0,255)',    // 低值 - 蓝色
+        0.55: 'rgb(0,255,0)',    // 中值 - 绿色
+        0.85: 'yellow',          // 较高 - 黄色
+        1.0: 'rgb(255,0,0)',     // 高值 - 红色
     },
 });
 
-// 设置热力图数据 (带权重)
-planeHeatmap.setData({
-    type: 'FeatureCollection',
-    features: [
-        {
-            properties: { weight: 1.0 },     // 权重值 (0-1)
-            geometry: { type: 'Point', coordinates: [116.404, 39.915, 0] }
-        },
-        {
-            properties: { weight: 0.8 },
-            geometry: { type: 'Point', coordinates: [116.405, 39.915, 0] }
-        },
-        {
-            properties: { weight: 0.6 },
-            geometry: { type: 'Point', coordinates: [116.404, 39.916, 0] }
-        },
-        {
-            properties: { weight: 0.4 },
-            geometry: { type: 'Point', coordinates: [116.406, 39.914, 0] }
-        },
-        {
-            properties: { weight: 0.9 },
-            geometry: { type: 'Point', coordinates: [116.405, 39.916, 0] }
-        },
-    ]
+engine.addToScene(heatmap);
+
+// 粒子热力图 (3D柱状效果)
+const particleHeatmap = new Heatmap({
+    kind: 'particle',
+    width: 512,
+    height: 512,
+    radius: 40,
+    min: 0,
+    max: 100,
+    data: [
+        { longitude: 116.404, latitude: 39.915, value: 80 },
+    ],
+    particle: {
+        maxHeight: 10,           // 粒子最高高度 (单位2dm)
+        countX: 400,             // X轴栅格分辨率
+        countY: 400,             // Y轴栅格分辨率
+        scaleBoxXY: 1,           // 粒子缩放
+    },
 });
 
-engine.addToScene(planeHeatmap);
-
-// 动态更新热力图数据
-function updateHeatmap(newPoints) {
-    planeHeatmap.setData({
-        type: 'FeatureCollection',
-        features: newPoints.map(p => ({
-            properties: { weight: p.weight },
-            geometry: { type: 'Point', coordinates: [p.lng, p.lat, 0] }
-        }))
-    });
-}
+engine.addToScene(particleHeatmap);
 ```
 
 **Heatmap 参数:**
 | 参数 | 类型 | 可选值 | 说明 |
 |------|------|--------|------|
-| `type` | string | plane/particle | 热力图类型 |
-| `radius` | number | - | 影响半径 |
-| `intensity` | number | - | 强度 |
-| `maxIntensity` | number | - | 最大强度 |
-| `gradient` | object | - | 颜色梯度映射 |
+| `kind` | string | texture/cube/cone/particle | 热力图类型 (默认texture) |
+| `width` | number | - | 画布宽 (像素, 默认512) |
+| `height` | number | - | 画布高 (像素, 默认512) |
+| `radius` | number | - | 每个点的作用范围 (默认40) |
+| `blur` | number | - | 模糊度 (默认0.85) |
+| `opacity` | number | - | 整体透明度 |
+| `min` | number | - | 数据最小值 |
+| `max` | number | - | 数据最大值 |
+| `data` | array | - | 数据数组 [{longitude, latitude, value}] |
+| `gradient` | object | - | 颜色梯度 (CSS颜色字符串, texture/cube/cone有效) |
+| `minOpacity` | number | - | 最小透明度 (默认0) |
+| `maxOpacity` | number | - | 最大透明度 (默认1) |
+| `duration` | number | - | 数据更新过渡时间 (秒, 默认1) |
+| `particle` | object | - | 粒子类型专用配置 |
 
 ---
 

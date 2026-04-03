@@ -770,7 +770,7 @@ const levelManage = new Engine.LevelManage(engine);
 levelManage.switchLevel('NewLevelName');
 
 // 监听关卡加载完成
-engine.addEventListener('onUElLevelLoaded', () => {
+engine.addEventListener('onUEILevelLoaded', () => {
     console.log('关卡加载完成');
 });
 
@@ -1074,30 +1074,55 @@ engine.addToScene(layerBuilding);
 ### 支持的事件类型
 
 ```javascript
-// 鼠标事件 (对象上)
-'mousedown'
-'mouseup'
-'mousemove'
-'mouseover'
-'click'
-'dblclick'
+// 动态对象鼠标事件 (所有通过 addToScene 添加的对象上)
+'mousedown'     // 鼠标在对象上按下
+'mouseup'       // 鼠标在对象上抬起
+'mouseover'     // 鼠标移入对象
+'mouseleave'    // 鼠标移出对象
 
 // 相机事件 (engine.camera 上)
-'cameraChange'     // 相机变化
-'clickLocation'    // 点击位置 (获取坐标)
+'cameraChange'     // 相机位置/姿态变化
+'clickLocation'    // 鼠标左键点击位置坐标
 
-// 引擎事件 (engine 上)
-'videoInitialised'      // 画面加载完成
-'signalingServerError'  // 信令服务器错误
-'sceneInitialised'      // 场景初始化完成
-'onUElLevelLoaded'      // 关卡加载完成
-'switchLevel'           // 关卡切换
+// 引擎级别事件 (engine 上)
+'videoInitialised'      // 画面加载完成 (WebRTC画面就绪)
+'signalingServerError'  // 信令服务器错误 (SDK内部事件)
+'addToScene'            // 对象创建完成回调
+'navigationStart'       // 巡游开始
+'navigationFinish'      // 巡游完成
+'moveTo'                // moveTo 镜头跳转结束
+'switchLevel'           // 关卡开始切换
+'onUEILevelLoaded'      // 关卡加载完成 (含关卡切换完成)
+'editResult'            // 测量/绘制结果回调
+'L2Selected'            // L2建筑选取回调
+'FPSState'              // FPS值回调
+'POICreateFinish'       // POI渲染完成回调
+
+// scene 对象事件 (engine.scene 上)
+'cityChange'            // 引擎级别城市变化
+
+// TrafficLayer 事件
+'onConnected'           // 服务连接成功
+'onDIsconnected'        // 服务断开连接
+'onFail'                // 服务连接失败
+'follow'                // 车辆追踪回调
+'unfollow'              // 车辆停止追踪回调
 
 // AssetLayer 事件
-'assetLoadFinish'       // 资产加载完成
+'assetLoadFinish'       // 当前范围内资产加载完成
 
 // AutonomousVehicleLayer 事件
 'foundV5Apollo'         // 发现 V5 Apollo 车辆
+
+// LayerBuilding 事件 (engine.scene 上)
+'layerBuildingName'     // 可分层建筑解析完成，返回解析结果
+
+// BasicLabel 事件
+'contentLoaded'         // 标签内容加载完成
+
+// BaseSequencer 事件
+'createFinish'          // 离线渲染创建完成
+'sequencerRenderFinish' // 离线渲染完成
 ```
 
 ### 点击位置事件 (正确方式)

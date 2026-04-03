@@ -68,27 +68,28 @@ engine.moveTo(
 
 ---
 
-### pathNavigation 路径巡航
+### navigateByKeypoints 路径巡航
 
 ```javascript
-// 定义巡航路径点
-const navPoints = [
-    { x: 116.400, y: 39.910, z: 100 },
-    { x: 116.405, y: 39.912, z: 120 },
-    { x: 116.410, y: 39.915, z: 80 },
-    { x: 116.415, y: 39.918, z: 100 },
-    { x: 116.420, y: 39.920, z: 150 },
-];
+// 路径点格式: [经度, 纬度, 高度, roll, pitch, yaw]
+engine.navigateByKeypoints(
+    [
+        [106.61950, 26.64954, 10, 0, 0, 90],
+        [106.61968, 26.64872, 15, -180, 0, 0],
+        [106.62059, 26.64869, 10, 0, 0, 0],
+    ],
+    {
+        speed: 36,              // 巡航速度 (km/h), speed>0时优先用速度
+        time: 20,               // 巡航总时长 (秒), speed<=0时生效
+        patrolType: 'default',  // 'default' | 'Car'
+        lockAll: true,          // 锁定 rotation 和 zoom
+    }
+);
 
-// 开始巡航
-engine.pathNavigation(navPoints, {
-    duration: 30,                // 总时长 (秒)
-    loop: true,                  // 循环巡航
-    lookAt: true,                // 视线跟随路径方向
-});
-
-// 停止巡航
-// engine.stopPathNavigation();
+// 暂停/继续/停止巡航
+engine.pauseNavigation({ patrolType: 'default' });
+engine.resumeNavigation({ patrolType: 'default' });
+engine.stopNavigation({ patrolType: 'default', delayTime: 0 });
 ```
 
 ---
@@ -123,8 +124,13 @@ console.log('偏航角:', engine.camera.yaw);
 
 // 监听相机变化
 engine.camera.addEventListener('cameraChange', (event) => {
-    console.log('相机位置变化:', event.position);
-    console.log('相机姿态变化:', event.rotation);
+    const camera = event.content.camera;
+    console.log('经度:', camera.Location.longitude);
+    console.log('纬度:', camera.Location.latitude);
+    console.log('高度:', camera.Location.altitude);
+    console.log('roll:', camera.Rotate.roll);
+    console.log('pitch:', camera.Rotate.pitch);
+    console.log('yaw:', camera.Rotate.yaw);
 });
 
 // 定时获取相机位置

@@ -172,79 +172,71 @@ function setWaterLevel(level) {
 
 ## LayerBuilding 楼宇拆解
 
-展示建筑分层拆解效果。
+控制 UE5 场景内建筑的分层拆解与还原效果。
 
 ```javascript
 import { LayerBuilding } from 'mapv-cloudrenderengine';
 
 const layerBuilding = new LayerBuilding({
-    // 建筑配置
-    floors: 10,                      // 楼层数
-    floorHeight: 3,                  // 每层高度 (米)
-
-    // 拆解动画
-    separationDistance: 5,           // 分离距离 (米)
-    animationDuration: 2000,         // 动画时长 (毫秒)
+    buildingName: 'all',         // 控制的建筑名称，'all' 表示全部，默认 'all'
+    layeringHeight: 1500,        // 楼层分解时每层间距 (cm)，默认 500
+    layeringBaseHeight: 3000,    // 分解时模型整体抬高高度 (cm)，默认 300
+    floorPullDir: { x: 5000, y: 0, z: 0 }, // 楼层抽出方位 (cm)，默认 x:5000
+    hiddenDefault: true,         // 分层模型默认是否隐藏，默认 true
 });
 
-// 设置建筑位置
-layerBuilding.setData({
-    type: 'FeatureCollection',
-    features: [{
-        geometry: {
-            type: 'Polygon',
-            coordinates: [[
-                [116.404, 39.915, 0],
-                [116.405, 39.915, 0],
-                [116.405, 39.916, 0],
-                [116.404, 39.916, 0],
-                [116.404, 39.915, 0]
-            ]]
-        }
-    }]
+// 监听楼层解析完成 (挂在 engine.scene 上)
+engine.scene.addEventListener('layerBuildingName', (data) => {
+    // data.content.content[0].Floors 为楼层名称数组
+    if (data && data.content && data.content.content) {
+        const floors = data.content.content[0].Floors;
+        console.log('可操控楼层列表:', floors);
+    }
 });
 
 engine.addToScene(layerBuilding);
 
-// 触发拆解动画
-layerBuilding.explode();
+// 触发分层炸开
+layerBuilding.layeringBuilding();
 
-// 恢复原状
-layerBuilding.collapse();
+// 还原为整体建筑
+layerBuilding.backBuildingToNormal();
 
-// 展示指定楼层
-layerBuilding.showFloor(5);  // 显示第5层
+// 隐藏指定层号及以上的楼层 (楼层号从 1 开始)
+layerBuilding.hideAboveFloor(5);
+
+// 显示所有楼层
+layerBuilding.showAll();
 ```
 
 ---
 
 ## BuildingPickup 建筑拾取
-
-启用建筑物点击拾取功能。
+L2建筑拾取，点击场景中的建筑获取建筑信息。
 
 ```javascript
 import { BuildingPickup } from 'mapv-cloudrenderengine';
 
-const buildingPickup = new BuildingPickup({
-    highlightColor: { r: 0, g: 1, b: 1 },   // 高亮颜色
-    highlightOpacity: 0.8,
+// 注意：第一个参数是 engine 实例
+const buildingPickup = new BuildingPickup(engine, {
+    enable: true,                             // 启用，默认 false
+    rayDetectionDistance: 500000,             // 拾取距离 (cm)，默认 500000
+    url: 'http://your-server/building/',      // L2建筑信息服务地址
+    enableUI: false,                          // 是否启用默认 UI，默认 true
+    onSelected: (event) => {
+        // 拾取到建筑时的回调，event 为建筑信息
+        console.log('拾取到建筑:', event);
+    },
 });
 
-engine.addToScene(buildingPickup);
-
-// 监听建筑点击
-buildingPickup.addEventListener('mousedown', (event) => {
-    console.log('点击建筑:', event);
-    if (event.buildingInfo) {
-        console.log('建筑ID:', event.buildingInfo.id);
-        console.log('建筑高度:', event.buildingInfo.height);
-        console.log('建筑名称:', event.buildingInfo.name);
-    }
+// 或者通过引擎事件监听 L2Selected
+engine.addEventListener('L2Selected', (event) => {
+    console.log('L2建筑选取:', event);
 });
 
-// 开启/关闭拾取功能
-buildingPickup.enable = true;
-buildingPickup.enable = false;
+// 启用/关闭拾取
+buildingPickup.enablePickup();
+buildingPickup.disablePickup();
 ```
 
 ---
@@ -465,11 +457,6 @@ const tileLayer = new I3DTileLayer({
 
 engine.addToScene(tileLayer);
 
-// 监听加载完成
-tileLayer.addEventListener('ready', () => {
-    console.log('3DTiles 加载完成');
-});
-
 // 显示/隐藏
 tileLayer.visible = true;
 tileLayer.visible = false;
@@ -479,20 +466,20 @@ tileLayer.visible = false;
 
 ## RoutePlan 路线规划
 
-显示路线规划结果。
+显示路线规划结果。RoutePlan 继承自 Line，支持 Line 的所有样式参数。
 
 ```javascript
 import { RoutePlan } from 'mapv-cloudrenderengine';
 
 const routePlan = new RoutePlan({
-    lineWidth: 8,
-    lineColor: { r: 0, g: 0.5, b: 1 },
-    arrowColor: { r: 1, g: 1, b: 1 },
-    showArrow: true,
-    arrowSpeed: 0.5,
+    color: { r: 0, g: 0.5, b: 1 },  // 线颜色，继承自 Line
+    width: 8,                         // 线宽
+    style: 'arrow',                   // 线型，继承自 Line
+    speed: 0.5,                       // 动画速度，继承自 Line
+    url: 'http://your-server/routeplan', // 路径规划接口地址
 });
 
-// 设置路线点
+// 设置路线点 (GeoJSON LineString)
 routePlan.setData({
     type: 'FeatureCollection',
     features: [{
@@ -502,29 +489,10 @@ routePlan.setData({
                 [116.400, 39.910, 0],
                 [116.405, 39.912, 0],
                 [116.410, 39.915, 0],
-                [116.415, 39.920, 0],
-                [116.420, 39.925, 0]
             ]
         }
     }]
 });
 
 engine.addToScene(routePlan);
-
-// 沿路线移动相机
-function followRoute() {
-    const points = [
-        { x: 116.400, y: 39.910, z: 50 },
-        { x: 116.405, y: 39.912, z: 50 },
-        { x: 116.410, y: 39.915, z: 50 },
-        { x: 116.415, y: 39.920, z: 50 },
-        { x: 116.420, y: 39.925, z: 50 },
-    ];
-
-    engine.pathNavigation(points, {
-        duration: 30,
-        loop: false,
-        lookAt: true
-    });
-}
 ```

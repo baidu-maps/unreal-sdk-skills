@@ -20,8 +20,7 @@ const dashedLine = new Line({
     style: 'dashed',
     width: 3,
     color: { r: 1, g: 1, b: 0 },
-    dashLength: 10,            // 虚线段长度
-    gapLength: 5,              // 间隔长度
+    tilling: 5,                // 纹理平铺密度（控制虚线间隔，值越小越密）
 });
 
 // 流动箭头线
@@ -81,10 +80,10 @@ engine.addToScene(solidLine);
 | `opacity` | number | - | 透明度 (0-1) |
 | `brightness` | number | - | 发光强度 |
 | `speed` | number | - | 流动速度 |
-| `tilling` | number | - | 纹理平铺 |
+| `tilling` | number | - | 纹理平铺密度 (虚线/箭头线间距) |
 | `map` | string | - | 贴图纹理 |
-| `dashLength` | number | - | 虚线段长度 |
-| `gapLength` | number | - | 虚线间隔长度 |
+| `openStroke` | boolean | - | 是否描边 |
+| `strokeWidth` | number | - | 描边宽度 |
 
 ---
 
@@ -138,13 +137,15 @@ engine.addToScene(multiLine);
 import { ODLine } from 'mapv-cloudrenderengine';
 
 const odLine = new ODLine({
-    color: { r: 0, g: 1, b: 1 },     // 起点颜色
-    color2: { r: 1, g: 0, b: 1 },    // 终点颜色
+    color: { r: 0, g: 1, b: 1 },     // 线颜色
     width: 3,                         // 线宽
-    height: 100,                      // 弧线高度 (米)
-    speed: 1,                         // 飞行速度
-    opacity: 0.8,
-    trailLength: 0.3,                 // 拖尾长度 (0-1)
+    speed: 0.5,                       // 动画速度
+    opacity: 0.02,                    // 不透明度 (默认0.02)
+    angle: 40,                        // 中间点与起始点高度夹角 (度，默认40)
+    circleScale: 50,                  // 起始点扩散圆形尺寸 (默认50)
+    brightness: 100,                  // 自发光亮度 (默认100)
+    startHide: false,                 // 是否隐藏起始点特效
+    endHide: false,                   // 是否隐藏终止点特效
 });
 
 odLine.setData({
@@ -177,13 +178,16 @@ engine.addToScene(odLine);
 **ODLine 参数:**
 | 参数 | 类型 | 说明 |
 |------|------|------|
-| `color` | object | 起点颜色 |
-| `color2` | object | 终点颜色 |
-| `width` | number | 线宽 |
-| `height` | number | 弧线最高点高度 (米) |
-| `speed` | number | 飞行动画速度 |
-| `opacity` | number | 透明度 |
-| `trailLength` | number | 拖尾长度 (0-1) |
+| `color` | object | 线颜色 {r,g,b} |
+| `width` | number | 线宽 (默认1) |
+| `speed` | number | 动画速度 (默认0.5) |
+| `opacity` | number | 不透明度 (默认0.02) |
+| `angle` | number | 中间点与起始点高度夹角 (度，默认40) |
+| `circleScale` | number | 起始点扩散圆形尺寸 (默认50) |
+| `brightness` | number | 自发光亮度 (默认100) |
+| `startHide` | boolean | 隐藏起始点特效 |
+| `endHide` | boolean | 隐藏终止点特效 |
+| `renderNum` | number | 每帧渲染的shape数量 (默认10) |
 
 ---
 
@@ -271,9 +275,8 @@ engine.addToScene(texturedLine);
 ```javascript
 const standLine = new Line({
     style: 'solid',
-    direction: 'stand',        // 立体方向
+    direction: 'stand',        // 立体方向 (LineDirectionOptions.STAND)
     width: 5,
-    height: 10,                // 立体高度
     color: { r: 0, g: 0.8, b: 1 },
     opacity: 0.7,
 });
