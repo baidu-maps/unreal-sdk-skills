@@ -1,12 +1,12 @@
 ---
 name: cloudrenderengine
-description: This skill should be used when the user asks to "use mapv-cloudrenderengine", "create 3D visualization", "add map markers", "render geographic data", "use cloud rendering engine", "create lines/polygons/points on map", "add particle effects", "control weather/time", "use camera navigation", "初始化云渲染引擎", "添加地图标注", "绘制轨迹线", "创建热力图", "设置天气效果", "相机飞行动画", "获取点击坐标", "clickLocation事件", "动态资产AssetLayer", "自动驾驶车辆", "大规模路况", "信号灯接入", "关卡切换", "WebRTC监控", "建筑生长动画", "情报板编辑", "楼宇拆解", or needs guidance on CloudRenderEngine API, class inheritance, data formats, and best practices.
-version: 1.7.0
+description: This skill should be used when the user asks to "use mapv-cloudrenderengine", "create 3D visualization", "add map markers", "render geographic data", "use cloud rendering engine", "create lines/polygons/points on map", "add particle effects", "control weather/time", "use camera navigation", "初始化云渲染引擎", "创建云渲染demo", "快速接入调度服务", "生成云渲染项目", "添加地图标注", "绘制轨迹线", "创建热力图", "设置天气效果", "相机飞行动画", "获取点击坐标", "clickLocation事件", "动态资产AssetLayer", "自动驾驶车辆", "大规模路况", "信号灯接入", "关卡切换", "WebRTC监控", "建筑生长动画", "情报板编辑", "楼宇拆解", or needs guidance on CloudRenderEngine API, class inheritance, data formats, and best practices.
+version: 1.8.0
 ---
 
 # mapv-cloudrenderengine 开发指南
 
-mapv-cloudrenderengine 是百度地图开放平台提供的云渲染引擎库，基于 Unreal Engine 5 提供高品质的 3D 地理可视化能力。通过 WebRTC 像素流技术，将 UE5 渲染结果实时传输到浏览器端。
+mapv-cloudrenderengine 是一款基于 Unreal Engine 5 的云渲染引擎库，提供高品质的 3D 地理可视化能力。通过 WebRTC 像素流技术，将 UE5 渲染结果实时传输到浏览器端。
 
 ## 安装
 
@@ -44,18 +44,140 @@ EventDispatcher → Object3D → Shape
                            └── Particle, Radar, Ripple, Decal, Heatmap...
 ```
 
-## 引擎初始化
+## 快速生成可运行 Demo
 
-### 云渲染模式 (默认推荐)
+当用户提出"创建云渲染 demo"、"接入调度服务"、"生成云渲染项目"类请求时，按以下流程处理：
+
+### 第 1 步：收集必要参数
+
+检查用户消息中是否包含以下参数，**缺少任一项必须向用户确认后再继续**：
+
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| `DISPATCH_HOST` | 调度服务地址（含协议和端口） | `http://127.0.0.1:8017` |
+| `PROJECT_NAME` | 项目名称（consul 中配置的英文名） | `wxhs` |
+| `USERNAME` | 用户名（可选，默认 `admin`） | `admin` |
+| `PASSWORD` | 密码（可选，默认 `admin`） | `admin` |
+
+确认示例：
+> 请提供调度服务地址（如 `http://127.0.0.1:8017`）和 projectName，才能生成可运行的 demo。
+
+### 第 2 步：检测当前项目框架
+
+检查当前工作目录，按优先级判断：
+
+1. 存在 `package.json` → 读取 `dependencies`/`devDependencies`：
+   - 含 `react` → **React 框架**
+   - 含 `vue` → **Vue 框架**
+2. 存在 `.vue` 文件 → **Vue 框架**
+3. 存在 `.jsx`/`.tsx` 文件 → **React 框架**
+4. **空目录或无法判断 → 使用 Vite 脚手架初始化 React 项目**（见第 3 步）
+
+### 第 3 步：空目录时初始化 Vite + React 项目
+
+若第 2 步判断为空目录，执行以下命令初始化项目，然后继续第 4 步：
+
+```bash
+npm create vite@latest . -- --template react
+npm install
+```
+
+> 执行前告知用户：将在当前目录初始化一个 Vite + React 项目，询问确认后再执行。
+
+初始化完成后，项目结构如下：
+```
+src/
+├── App.jsx          ← 需要修改，挂载 CloudRenderApp
+├── main.jsx
+└── components/      ← CloudRenderApp.jsx 写入此处
+```
+
+### 第 4 步：生成组件文件
+
+读取对应模板（`assets/templates/`），将占位符替换为实际参数后写入目标项目：
+
+- **React**：读取 `assets/templates/react/CloudRenderApp.jsx` 和 `CloudRenderApp.module.css`
+- **Vue**：读取 `assets/templates/vue/CloudRenderApp.vue`
+
+占位符替换规则：
+- `{{DISPATCH_HOST}}` → 用户提供的调度服务地址
+- `{{PROJECT_NAME}}` → 用户提供的项目名称
+- `{{USERNAME}}` → 用户名（未提供时填 `admin`）
+- `{{PASSWORD}}` → 密码（未提供时填 `admin`）
+
+写入路径建议（根据项目结构灵活调整）：
+- React：`src/components/CloudRenderApp.jsx` + `src/components/CloudRenderApp.module.css`
+- Vue：`src/components/CloudRenderApp.vue`
+
+### 第 5 步：修改入口文件挂载组件
+
+将 `App.vue`（或 `App.jsx`）内容替换为最简挂载，确保 `CloudRenderApp` 是唯一根组件，不被其他样式遮挡：
+
+**Vue（`src/App.vue`）：**
+```vue
+<template>
+  <CloudRenderApp />
+</template>
+
+<script setup>
+import CloudRenderApp from './components/CloudRenderApp.vue';
+</script>
+
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { overflow: hidden; }
+</style>
+```
+
+**React（`src/App.jsx`）：**
+```jsx
+import CloudRenderApp from './components/CloudRenderApp';
+export default function App() {
+    return <CloudRenderApp />;
+}
+```
+
+### 第 6 步：安装依赖并告知运行方式
+
+生成所有文件后，执行：
+
+```bash
+npm install mapv-cloudrenderengine
+```
+
+最后向用户输出运行指引：
+
+```
+✅ 云渲染 Demo 已生成！
+
+项目结构：
+  src/components/CloudRenderApp.vue   ← 云渲染主组件
+  src/App.vue                          ← 已配置挂载
+
+运行项目：
+  npm run dev
+
+访问：http://localhost:5173
+连接成功后画面将自动显示云渲染内容。
+
+调度服务：{{DISPATCH_HOST}}
+项目名称：{{PROJECT_NAME}}
+```
+
+接入细节参考：**`references/quickstart.md`**
+
+---
+
+
 
 通过 WebRTC 连接远程 UE5 服务器，适用于大多数场景，支持移动端。
 
 ```javascript
 import * as Engine from 'mapv-cloudrenderengine';
+// 外网: import * as Engine from 'mapv-cloudrenderengine';
 
 // 1. 配置调度服务
-// ⚠️ 重要：以下为示例配置，请替换为实际的服务器地址和凭证
-Engine.CloudRenderEngine.DispatchServer.host = 'https://your-dispatch-server.example.com';
+Engine.CloudRenderEngine.DispatchServer.host = 'http://your-server:8017';
 Engine.CloudRenderEngine.DispatchServer.username = 'your-username';
 Engine.CloudRenderEngine.DispatchServer.password = 'your-password';
 
@@ -166,14 +288,13 @@ engine.camera.addEventListener('clickLocation', (event) => {
 
 ```javascript
 // 步骤1: 在 videoInitialised 中配置模型信息 (必须先执行，仅一次)
-// ⚠️ 重要：API 地址和参数需要根据实际服务配置
 let modelInfoConfigured = false;
 engine.addEventListener('videoInitialised', () => {
     if (!modelInfoConfigured) {
         engine.setupModelInfo(
-            'https://your-api-server.example.com/api/modelInfo',
-            { project_id: 'your-project-id' },
-            { Authorization: 'Bearer your-token' }
+            'http://server/searchModelInfos?system=mapvUnreal',
+            { all: 1, common: 1, project_id: 'your-project-id' },
+            { Authorization: 'your-token' }
         );
         modelInfoConfigured = true;
     }
@@ -181,8 +302,8 @@ engine.addEventListener('videoInitialised', () => {
 
 // 步骤2: 创建 AssetLayer (在 setupModelInfo 之后)
 const assetLayer = new Engine.AssetLayer({
-    url: 'https://your-api-server.example.com/api/devices',
-    header: { Authorization: 'Bearer your-token' },
+    url: 'http://server/getDeviceListByRadius?system=mapvUnreal',
+    header: { Authorization: 'your-token' },
     body: {
         project_id: 'your-project-id',
         radius: 1500,
@@ -293,6 +414,9 @@ assetLayer.addEventListener('mousedown', (e) => {
 **网络卡顿？** 通过 `onWebRtcConnectionStats` 监控 RTT、丢包率、码率等指标诊断问题。
 
 ## 参考文档
+
+### 快速启动
+- **`references/quickstart.md`** - 调度服务接入步骤、player div 要求、模板占位符说明
 
 ### 核心参考
 - **`references/api-reference.md`** - 完整 API 参考（导出类清单、构造函数参数）

@@ -1,0 +1,85 @@
+.container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #0a0e1a;
+}
+
+/* id="player" 的容器必须绝对定位全屏，z-index 设为 0 让业务 UI 覆盖在上方 */
+.player {
+  width: 100vw;
+  height: 100vh;
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  background-image: linear-gradient(
+    180deg,
+    rgba(3, 23, 66, 0.99) 0%,
+    rgba(3, 23, 66, 0.69) 1%,
+    rgba(17, 20, 36, 0) 74%
+  );
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 14, 26, 0.88);
+  color: #8bb8e8;
+  font-size: 15px;
+}
+
+.errorBox {
+  text-align: center;
+  color: #ff6b6b;
+}
+
+.errorMsg {
+  font-size: 13px;
+  margin: 8px 0 16px;
+  color: #ffaaaa;
+  max-width: 360px;
+}
+
+.errorBox button {
+  padding: 8px 24px;
+  background: #1a4a8a;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.errorBox button:hover {
+  background: #2a5aaa;
+}
+
+/* 业务 UI 区域：z-index 999 确保显示在画面上方 */
+.header {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.badge {
+  color: #4dff91;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.meta {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+}
