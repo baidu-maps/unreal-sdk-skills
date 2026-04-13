@@ -1,7 +1,7 @@
 ---
 name: cloudrenderengine
 description: This skill should be used when the user asks to "use mapv-cloudrenderengine", "create 3D visualization", "add map markers", "render geographic data", "use cloud rendering engine", "create lines/polygons/points on map", "add particle effects", "control weather/time", "use camera navigation", "初始化云渲染引擎", "创建云渲染demo", "快速接入调度服务", "生成云渲染项目", "添加地图标注", "绘制轨迹线", "创建热力图", "设置天气效果", "相机飞行动画", "获取点击坐标", "clickLocation事件", "动态资产AssetLayer", "自动驾驶车辆", "大规模路况", "信号灯接入", "关卡切换", "WebRTC监控", "建筑生长动画", "情报板编辑", "楼宇拆解", or needs guidance on CloudRenderEngine API, class inheritance, data formats, and best practices.
-version: 1.8.0
+version: 1.9.0
 ---
 
 # mapv-cloudrenderengine 开发指南
@@ -285,6 +285,24 @@ engine.camera.addEventListener('clickLocation', (event) => {
 ### AssetLayer 动态资产 (重要)
 
 > **AssetLayer 必须按以下步骤使用，否则无法正常工作！**
+
+#### 使用前：必须收集以下参数
+
+当用户请求接入 AssetLayer 时，检查是否已提供全部必填参数，**缺少任一项必须主动向用户询问后再继续**：
+
+| 参数 | 说明 | 填入位置 |
+|------|------|----------|
+| `MODEL_INFO_URL` | 模型信息服务地址 | `setupModelInfo()` 第 1 参数 |
+| `DEVICE_LIST_URL` | 点位列表服务地址 | `AssetLayer({ url })` |
+| `AUTHORIZATION` | 鉴权 Token | `setupModelInfo()` header 和 `AssetLayer({ header })` |
+| `PROJECT_ID` | 项目 ID | `setupModelInfo()` body 和 `AssetLayer({ body.project_id })` |
+
+询问示例：
+> 接入 AssetLayer 需要以下信息，请提供：
+> 1. 模型信息服务地址（如 `http://your-server/searchModelInfos?system=mapvUnreal`）
+> 2. 点位列表服务地址（如 `http://your-server/getDeviceListByRadius?system=mapvUnreal`）
+> 3. 鉴权 Token（Authorization 请求头的值）
+> 4. 项目 ID（project_id）
 
 ```javascript
 // 步骤1: 在 videoInitialised 中配置模型信息 (必须先执行，仅一次)
