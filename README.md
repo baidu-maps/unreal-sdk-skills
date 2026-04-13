@@ -2,7 +2,7 @@
 
 > [中文版本 (Chinese Version)](./README_zh.md)
 
-> **Version**: 1.9.0
+> **Version**: 1.9.1
 > **Purpose**: Help Claude AI understand and use mapv-cloudrenderengine (Baidu Maps Cloud Rendering Engine) for 3D digital twin visualization development
 
 ---
