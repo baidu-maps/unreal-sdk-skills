@@ -101,6 +101,15 @@ import {
     SequencerEarthPersonLine,
     AdvancedFade,
 
+    // 模型控制
+    ExplodeControl,         // 模型爆炸/拆卸组装
+    L3ModelControl,         // L3精模控制(高亮/透明/轮廓)
+    SkeletonAnimControl,    // 骨骼动画控制
+    ModelSlice,             // 模型剖切(平面/盒体)
+
+    // 场景控制
+    WaterSimulation,        // 水面模拟
+
     // 其他
     IndoorMap,              // 室内地图
     RoadName,               // 路名
@@ -270,7 +279,7 @@ engine.navigateByKeypoints(
         lockAll: true,              // 锁定rotation和zoom, 默认true
         ignoreLag: false,           // 忽略摄像机平滑延迟, 默认false
         name: '',                   // 巡航名字
-        patrolType: 'default',      // 巡游类型: 'default' | 'Car'
+        patrolType: 'default',      // 巡游类型: 'default' | 'Car' | 'People'
         followRotation: { Roll: false, Pitch: false, Yaw: false },
         rayDetectionDistance: 1000, // 地面射线检测距离(cm), 默认1000
         finishDestory: true,        // 结束后销毁车辆(Car模式)
@@ -283,6 +292,18 @@ engine.navigateByKeypoints(
 engine.pauseNavigation({ patrolType: 'default' });
 engine.resumeNavigation({ patrolType: 'default' });
 engine.stopNavigation({ patrolType: 'default', delayTime: 100 });
+
+// 目标环绕
+engine.OrbitAroundFocusPoint({
+    traget: [116.404, 39.915, 100],  // 焦点坐标 [经度, 纬度, 高度]
+    distance: 10,                     // 相机与焦点距离(米), 默认10
+    time: 10,                         // 环绕时间(秒), 默认10
+    loop: true,                       // 是否循环, 默认true
+    pitch: -25,                       // 相机俯仰角, 默认-25
+});
+
+// 停止目标环绕
+engine.stopOrbitAround();
 
 // 移动/旋转摄像机
 engine.moveCamera({ multiplier: 1, x: 0, y: 0 });      // x,y: [-1,1]
@@ -353,10 +374,9 @@ engine.onWebRtcConnectionStats((stats) => {
 import * as Engine from 'mapv-cloudrenderengine';
 
 // 配置调度服务
-// ⚠️ 重要：以下为示例配置，请替换为实际的服务器地址和凭证
-Engine.CloudRenderEngine.DispatchServer.host = 'https://your-dispatch-server.example.com';
-Engine.CloudRenderEngine.DispatchServer.username = 'your-username';
-Engine.CloudRenderEngine.DispatchServer.password = 'your-password';
+Engine.CloudRenderEngine.DispatchServer.host = 'http://server:8017';
+Engine.CloudRenderEngine.DispatchServer.username = 'username';
+Engine.CloudRenderEngine.DispatchServer.password = 'password';
 Engine.CloudRenderEngine.DispatchServer.tag = '';  // 可选标签
 
 // 获取项目列表
@@ -739,7 +759,7 @@ engine.addToScene(roadCondition);
 
 ```javascript
 const infoLight = new Engine.InfoLightLayer({
-    url: 'https://your-api-server.example.com/api/traffic-lights?apiKey=your-key',    // 信号灯数据API
+    url: 'http://api/lamp/state?ak=xxx',    // 信号灯数据API
     lightAltitude: 3,                        // 灯光高度(米)
     renderScale: 0.2,                        // 渲染缩放
     renderTilesNum: 3,                       // 渲染瓦片数量
@@ -778,6 +798,148 @@ engine.addEventListener('onUEILevelLoaded', () => {
 engine.addEventListener('switchLevel', (e) => {
     console.log('切换到关卡:', e);
 });
+```
+
+## 模型控制类
+
+### L3ModelControl L3精模控制
+
+全局单例，通过 `engine.l3ModelControl` 访问。
+
+```javascript
+// 高亮模型
+engine.l3ModelControl.highlight([
+  { Id: '1153497', Color: {R: 1, G: 0, B: 0, A: 1}, Brightness: 2.0 }
+]);
+
+// 重置高亮
+engine.l3ModelControl.resetHighlight(['1153497']);
+
+// 设置透明度
+engine.l3ModelControl.setOpacity([
+  { Id: '1153497', Opacity: 0.5 }
+]);
+
+// 重置透明度
+engine.l3ModelControl.resetOpacity(['1153497']);
+
+// 轮廓高亮
+engine.l3ModelControl.setOutLine(
+  [{ Id: '1153497' }],
+  { Color: {R: 1, G: 0, B: 0, A: 1}, Brightness: 2.0 }
+);
+
+// 重置轮廓
+engine.l3ModelControl.resetOutLine(['1153497']);
+
+// 隐藏/显示模型
+engine.l3ModelControl.hide(['1153497', '1153498']);
+engine.l3ModelControl.show(['1153497']);
+
+// 批量重置所有效果
+engine.l3ModelControl.reset(['1153497', '1153498']);
+
+// 模型点击回调
+engine.addEventListener('customResponse', (res) => {
+  if (res.content.type === 'ModelClicked') {
+    console.log('被点击的模型 ID:', res.content.data.id);
+  }
+});
+```
+
+### ExplodeControl 模型爆炸/拆卸组装
+
+全局单例，通过 `engine.explodeControl` 访问。
+
+```javascript
+// 设置爆炸半径(米), 默认3
+engine.explodeControl.setRadius(10);
+
+// 整体爆炸
+engine.explodeControl.explodeAll('pump');
+
+// 整体还原
+engine.explodeControl.resetAll('pump');
+
+// 百分比爆炸 (0-1)
+engine.explodeControl.explodePercent('pump', 0.3);
+
+// 自定义模型组爆炸 (支持累进调用实现逐步拆卸)
+engine.explodeControl.explodePart('custom', ['Sphere', 'Cube', 'Cone'], ['Sphere']);
+
+// 自定义模型组还原 (支持累进调用实现逐步组装)
+engine.explodeControl.resetPart('custom', [], ['Sphere']);
+```
+
+### SkeletonAnimControl 骨骼动画控制
+
+全局单例，通过 `engine.skeletonAnimControl` 访问。
+
+```javascript
+// 播放动画
+engine.skeletonAnimControl.play(['2131097', '2131287']);
+
+// 停止动画
+engine.skeletonAnimControl.stop(['2131097']);
+
+// 批量控制
+engine.skeletonAnimControl.control([
+  { Id: '2131097', EnableAnim: true },
+  { Id: '2131287', EnableAnim: false }
+]);
+```
+
+### ModelSlice 模型剖切
+
+继承自 Object3D，支持 Plane(平面) 和 Box(盒体) 两种剖切形状，Gizmo 和 Direct 两种控制模式。
+
+```javascript
+import { ModelSlice } from 'mapv-cloudrenderengine';
+
+// 创建平面剖切 (Gizmo模式)
+const slice = new ModelSlice({
+  shape: 'Plane',           // 'Plane' | 'Box'
+  mode: 'Gizmo',            // 'Gizmo' | 'Direct'
+  gizmoType: 'TRANSLATE',   // 'TRANSLATE' | 'ROTATE' (仅Gizmo模式)
+  origin: { X: 114.3162, Y: 30.5810, Z: 50.0 },  // 中心点(经度,纬度,高程米)
+  size: { X: 50.0, Y: 30.0 },                      // 尺寸(米)
+  rotation: { Pitch: 0, Yaw: 0, Roll: 0 },
+});
+engine.addToScene(slice);
+
+// 动态切换属性
+slice.gizmoType = 'ROTATE';
+slice.mode = 'Direct';
+slice.shape = 'Box';
+
+// 销毁
+engine.destoryObject(slice);
+```
+
+## 水面模拟 (WaterSimulation)
+
+全局单例，通过 `engine.waterSimulation` 访问。
+
+```javascript
+// 静态更新水位
+engine.waterSimulation.update([
+  { Id: 'Plane1', HeightMin: '2', HeightMax: '6', Height: '4', AutoLerp: false }
+]);
+
+// 渐变模拟（动画）
+engine.waterSimulation.update([
+  { Id: 'Plane1', HeightMin: '2', HeightMax: '6', Height: '4', LerpTime: 5.0, AutoLerp: true }
+]);
+
+// 设置水体颜色
+engine.waterSimulation.update([
+  {
+    Id: 'Plane1',
+    AutoLerp: false,
+    ColorB: { R: 0.09, G: 0.40, B: 0.22, A: 1.0 },
+    ColorA: { R: 0.04, G: 0.28, B: 0.44, A: 1.0 }
+  }
+]);
 ```
 
 ## 分析工具类
@@ -851,14 +1013,15 @@ let modelInfoConfigured = false;
 
 engine.addEventListener('videoInitialised', () => {
     if (!modelInfoConfigured) {
-        // ⚠️ 重要：API 地址和参数需要根据实际服务配置
         engine.setupModelInfo(
-            'https://your-api-server.example.com/api/modelInfo',
+            'http://your-server/digitalAssets/screen/searchModelInfos?system=mapvUnreal',
             {
+                all: 1,
+                common: 1,
                 project_id: 'your-project-id',  // 替换为实际项目ID
             },
             {
-                Authorization: 'Bearer your-auth-token',  // 替换为实际授权token
+                Authorization: 'your-auth-token',  // 替换为实际授权token
             }
         );
         modelInfoConfigured = true;
@@ -871,9 +1034,9 @@ engine.addEventListener('videoInitialised', () => {
 ```javascript
 // 基础用法：从服务端获取设备列表
 const assetLayer = new Engine.AssetLayer({
-    url: 'https://your-api-server.example.com/api/devices',
+    url: 'http://your-server/digitalAssets/screen/getDeviceListByRadius?system=mapvUnreal',
     header: {
-        Authorization: 'Bearer your-auth-token',
+        Authorization: 'your-auth-token',
     },
     body: {
         project_id: 'your-project-id',
@@ -910,13 +1073,13 @@ engine.addToScene(assetLayer);
 
 ```javascript
 const assetLayerRT = new Engine.AssetLayer({
-    url: 'https://your-api-server.example.com/api/devices',
-    header: { Authorization: 'Bearer your-token' },
-    body: { project_id: 'your-project-id', radius: 500 },
+    url: 'http://server/getDeviceListByRadius',
+    header: { Authorization: 'your-token' },
+    body: { project_id: 'xxx', radius: 500 },
     deviceAutoUpdate: true,
     deviceAutoUpdateInterval: 2,
     rtEnable: true,                             // 启用实时数据
-    rtUrl: 'wss://your-websocket-server.example.com/realtime',       // 实时数据WebSocket
+    rtUrl: 'ws://server/getdatabycellid',       // 实时数据WebSocket
     rtTilelLevel: 17,
     searchMode: 'mc_grid',
 });

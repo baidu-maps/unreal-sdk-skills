@@ -519,3 +519,90 @@ new Heatmap({
     }]
 }
 ```
+
+## 模型控制类详解
+
+### L3ModelControl L3精模控制
+
+全局单例，通过 `cloudRenderEngine.l3ModelControl` 访问，批量控制L3精模的视觉状态与交互行为。
+
+**方法:**
+| 方法 | 参数 | 说明 |
+|------|------|------|
+| highlight(models) | `[{Id, Color?, Brightness?, Reset?}]` | 模型高亮 |
+| resetHighlight(ids) | `string[]` | 重置高亮 |
+| setOpacity(models) | `[{Id, Opacity?, Reset?}]` | 设置透明度 |
+| resetOpacity(ids) | `string[]` | 重置透明度 |
+| setOutLine(models, effect?) | models: `[{Id, Reset?}]`, effect: `{Color?, Brightness?}` | 轮廓高亮 |
+| resetOutLine(ids) | `string[]` | 重置轮廓 |
+| hide(ids) | `string[]` | 隐藏模型 |
+| show(ids) | `string[]` | 显示模型 |
+| reset(ids) | `string[]` | 批量重置所有效果 |
+
+**点击回调事件:**
+```javascript
+engine.addEventListener('customResponse', (res) => {
+  if (res.content.type === 'ModelClicked') {
+    console.log('模型ID:', res.content.data.id);
+  }
+});
+```
+
+### ExplodeControl 模型爆炸/拆卸组装
+
+全局单例，通过 `cloudRenderEngine.explodeControl` 访问。
+
+**方法:**
+| 方法 | 参数 | 说明 |
+|------|------|------|
+| setRadius(radius) | number (米，默认3) | 设置爆炸半径 |
+| explodeAll(group) | string | 整体爆炸 |
+| resetAll(group) | string | 整体还原 |
+| explodePercent(group, percent) | group: string, percent: 0-1 | 百分比爆炸 |
+| explodePart(group, childIds, partList) | group: string, childIds: string[], partList: string[] | 自定义爆炸(累进) |
+| resetPart(group, childIds, partList) | group: string, childIds: string[], partList: string[] | 自定义还原(累进) |
+
+### SkeletonAnimControl 骨骼动画控制
+
+全局单例，通过 `cloudRenderEngine.skeletonAnimControl` 访问。
+
+**方法:**
+| 方法 | 参数 | 说明 |
+|------|------|------|
+| play(ids) | `string[]` | 播放动画 |
+| stop(ids) | `string[]` | 停止动画 |
+| control(models) | `[{Id: string, EnableAnim: boolean}]` | 批量控制 |
+
+### ModelSlice 模型剖切
+
+继承自 Object3D，通过 `new ModelSlice(params)` 创建，`addToScene` 添加到场景后生效。
+
+**构造参数:**
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| shape | string | 'Plane' | 'Plane' 或 'Box' |
+| mode | string | 'Gizmo' | 'Gizmo' 或 'Direct' |
+| gizmoType | string | 'TRANSLATE' | 'TRANSLATE' 或 'ROTATE'，仅Gizmo模式 |
+| origin | object | null | `{X: 经度, Y: 纬度, Z: 高程米}` |
+| size | object | null | Plane: `{X, Y}`, Box: `{X, Y, Z}` (米) |
+| rotation | object | `{Pitch:0, Yaw:0, Roll:0}` | 朝向 |
+
+属性支持动态修改（setter），修改后自动触发更新。
+
+### WaterSimulation 水面模拟
+
+全局单例，通过 `cloudRenderEngine.waterSimulation` 访问。
+
+**update(planes) 参数:**
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| Id | string | 水面ID |
+| Height | string | 高度 |
+| HeightMin | string | 最小高度 |
+| HeightMax | string | 最大高度 |
+| AutoLerp | boolean | 是否自动渐变 |
+| LerpTime | number | 渐变时间(秒) |
+| ColorA | object | 颜色A `{R, G, B, A}` |
+| ColorB | object | 颜色B `{R, G, B, A}` |
+| Opacity | number | 透明度 |
+| Percent | number | 百分比 |
