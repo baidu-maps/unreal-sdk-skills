@@ -268,7 +268,7 @@ EventDispatcher
 
 ### Version Information Location
 
-- **Current Version**: See `version: 1.5.0` at the top of `SKILL.md`
+- **Current Version**: See `version: 1.9.2` at the top of `SKILL.md`
 - **Changelog**: Currently inline in `SKILL.md`
 
 ### Documentation Writing Principles

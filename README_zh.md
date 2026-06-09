@@ -276,7 +276,7 @@ EventDispatcher
 
 ### 版本信息位置
 
-- **当前版本**: 查看 `SKILL.md` 顶部的 `version: 1.5.0`
+- **当前版本**: 查看 `SKILL.md` 顶部的 `version: 1.9.2`
 - **更新日志**: 目前在 `SKILL.md` 中内联说明
 
 ### 文档编写原则
