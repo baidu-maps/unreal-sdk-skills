@@ -606,3 +606,58 @@ engine.addEventListener('customResponse', (res) => {
 | ColorB | object | 颜色B `{R, G, B, A}` |
 | Opacity | number | 透明度 |
 | Percent | number | 百分比 |
+
+## 交通行业类详解（补充）
+
+### WSTrafficLayer WebSocket车流图层
+
+继承自 Object3D，接收 WebSocket 接口推送的车流数据并平滑渲染，适合特殊车流场景。
+
+**构造参数:**
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| url | string | - | WebSocket 服务地址（仅构造时传入） |
+| message | object | `{}` | 订阅消息体，如 `{crossId: '12'}`（可修改触发重新订阅） |
+| traceToGround | boolean | true | 是否贴地（仅构造时传入） |
+| traceLength | number | 10 | 射线检测距离(米)（仅构造时传入） |
+| visible | boolean | true | 显隐 |
+
+**方法:** `disconnect()` 断开连接、`reconnect()` 重新连接。
+
+### TJInfoLightLayer TJ信控灯图层
+
+继承自 Object3D，接收 WebSocket 接口推送的信控灯数据并渲染。
+
+**构造参数:**
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| url | string | - | WebSocket 服务地址（仅构造时传入） |
+| crossId | string | '' | 路口 id（可修改触发切换） |
+| scale | number | 0.4 | 缩放比例（仅构造时传入） |
+| visible | boolean | true | 显隐 |
+
+**方法:** `showCross(crossId)` 切换路口、`disconnect()` 断开连接、`reconnect()` 重新连接。
+
+## 数据加载类详解（补充）
+
+### PersonLine 数字人轨迹线
+
+继承自 Object3D，生成一个数字人沿传入坐标平滑移动并播放动画。
+
+**构造参数:**
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| linePoints | number[] | `[]` | 轨迹坐标扁平数组，每3个一组`[经度,纬度,高度]`，长度须为3的倍数 |
+| useSpeed | boolean | true | 是否用速度控制（true用speed, false用duration） |
+| speed | number | 10 | 移动速度(km/h)，useSpeed为true时生效 |
+| duration | number | 5 | 走完轨迹总时长(秒)，useSpeed为false时生效 |
+| loopMode | number | 0 | 循环模式：0停止 / 1从起点重新开始 / 2掉头返回 |
+| traceToGround | boolean | true | 是否贴地 |
+| traceLength | number | 20 | 射线检测距离(米) |
+| state | number | 0 | 状态：0暂停 / 1继续（**唯一可实例化后修改的属性**） |
+| onNavigationStart | Function | - | 开始移动回调 |
+| onNavigationFinish | Function | - | 结束移动回调 |
+
+**方法:** `pause()` 暂停、`resume()` 继续。
+
+> **注意**：除 `state` 外，其余参数均为只读，实例化后不可修改。

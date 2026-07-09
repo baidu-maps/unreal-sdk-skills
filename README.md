@@ -2,7 +2,7 @@
 
 > [中文版本 (Chinese Version)](./README_zh.md)
 
-> **Version**: 1.9.2
+> **Version**: 1.9.3
 > **Purpose**: Help Claude AI understand and use mapv-cloudrenderengine (Baidu Maps Cloud Rendering Engine) for 3D digital twin visualization development
 
 ---
@@ -268,7 +268,7 @@ EventDispatcher
 
 ### Version Information Location
 
-- **Current Version**: See `version: 1.9.2` at the top of `SKILL.md`
+- **Current Version**: See `version: 1.9.3` at the top of `SKILL.md`
 - **Changelog**: Currently inline in `SKILL.md`
 
 ### Documentation Writing Principles

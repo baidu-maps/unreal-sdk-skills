@@ -72,6 +72,8 @@ import {
     TrafficCone,            // 交通锥
     TrafficShape,           // 交通参与者
     AutonomousVehicleLayer, // 自动驾驶车辆
+    WSTrafficLayer,         // WebSocket车流图层(特殊车流)
+    TJInfoLightLayer,       // TJ信控灯图层
 
     // 模型类 (Models)
     FlashCar,               // 发光车辆
@@ -85,6 +87,7 @@ import {
     AssetLayer,             // 动态资产
     RoadPile,               // 动态路桩
     RoadDataManager,        // 高精动态数据
+    PersonLine,             // 数字人轨迹线
 
     // 分析工具 (Analysis)
     Skyline,                // 天际线分析
@@ -778,6 +781,80 @@ engine.addToScene(infoLight);
 infoLight.visible = true;
 ```
 
+### WSTrafficLayer WebSocket车流图层
+
+接收 WebSocket 接口推送的车流数据并平滑渲染，适合特殊车流场景。
+
+```javascript
+const wsTraffic = new Engine.WSTrafficLayer({
+    url: 'ws://server:81/v1/ws/sense/cross/targetObject',  // WebSocket地址(仅构造时传入)
+    message: { crossId: '12' },      // 订阅消息体(可修改触发重新订阅)
+    traceToGround: true,             // 是否贴地, 默认true(仅构造时传入)
+    traceLength: 10,                 // 射线检测距离(米), 默认10(仅构造时传入)
+});
+engine.addToScene(wsTraffic);
+
+// 切换订阅内容(触发更新)
+wsTraffic.message = { crossId: '13' };
+
+// 断开/重新连接
+wsTraffic.disconnect();
+wsTraffic.reconnect();
+
+// 控制显隐
+wsTraffic.visible = false;
+```
+
+### TJInfoLightLayer TJ信控灯图层
+
+接收 WebSocket 接口推送的信控灯数据并渲染。
+
+```javascript
+const lightLayer = new Engine.TJInfoLightLayer({
+    url: 'ws://server:81/v1/ws/base/getSpatLight',  // WebSocket地址(仅构造时传入)
+    crossId: '12',                   // 路口id(可修改)
+    scale: 0.4,                      // 缩放比例, 默认0.4(仅构造时传入)
+});
+engine.addToScene(lightLayer);
+
+// 切换路口(等价于修改 crossId)
+lightLayer.showCross('13');
+
+// 断开/重新连接
+lightLayer.disconnect();
+lightLayer.reconnect();
+```
+
+## 数字人轨迹线 (PersonLine)
+
+生成一个数字人，沿传入的坐标平滑移动并播放动画。
+
+```javascript
+const personLine = new Engine.PersonLine({
+    linePoints: [                    // 轨迹坐标(扁平数组, 每3个一组[经度,纬度,高度], 长度须为3的倍数)
+        106.6195, 26.6495, 10.2,
+        106.6194, 26.6494, 10.2,
+        106.6194, 26.6492, 0.2,
+    ],
+    useSpeed: true,                  // 是否用速度控制, 默认true(true用speed, false用duration)
+    speed: 10,                       // 移动速度(km/h), 默认10
+    duration: 5,                     // 走完轨迹总时长(秒), 默认5, useSpeed为false时生效
+    loopMode: 0,                     // 循环模式: 0停止 | 1从起点重新开始 | 2掉头返回
+    traceToGround: true,             // 是否贴地, 默认true
+    traceLength: 20,                 // 射线检测距离(米), 默认20
+    state: 0,                        // 状态: 0暂停 | 1继续, 默认0
+    onNavigationStart: (e) => console.log('开始移动', e),
+    onNavigationFinish: (e) => console.log('结束移动', e),
+});
+engine.addToScene(personLine);
+
+// 暂停/继续
+personLine.pause();
+personLine.resume();
+```
+
+> **注意**：除 `state` 外，其余参数均为只读，实例化后不可修改。
+
 ## 关卡管理 (LevelManage)
 
 ```javascript
@@ -907,10 +984,9 @@ const slice = new ModelSlice({
 });
 engine.addToScene(slice);
 
-// 动态切换属性
+// 动态切换属性 (shape 为只读，创建后不可修改；如需换形状请重新 new)
 slice.gizmoType = 'ROTATE';
 slice.mode = 'Direct';
-slice.shape = 'Box';
 
 // 销毁
 engine.destoryObject(slice);

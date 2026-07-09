@@ -1,6 +1,6 @@
 # CloudRenderEngine Skill
 
-> **Version**: 1.9.2
+> **Version**: 1.9.3
 > **Purpose**: 帮助 Claude AI 理解和使用 mapv-cloudrenderengine（百度地图云渲染引擎）进行 3D 数字孪生可视化开发
 
 ---
@@ -276,7 +276,7 @@ EventDispatcher
 
 ### 版本信息位置
 
-- **当前版本**: 查看 `SKILL.md` 顶部的 `version: 1.9.2`
+- **当前版本**: 查看 `SKILL.md` 顶部的 `version: 1.9.3`
 - **更新日志**: 目前在 `SKILL.md` 中内联说明
 
 ### 文档编写原则
