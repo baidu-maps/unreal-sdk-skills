@@ -315,6 +315,47 @@ new Polygon({
 - `Matrix`: 网格填充
 - `Custom`: 自定义贴图
 
+### PolygonMesh 多边形拉伸体
+
+继承自 Shape，高性能拉伸多边形 Mesh 面。`setData` 完全透传原始 GeoJSON（不拆壳、不三角化、不扁平化），由 UE 端自行解析 geometry 与 properties，适合大批量区块拉伸。
+
+**构造参数:**
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| data | object | - | GeoJSON FeatureCollection，支持 Polygon / MultiPolygon |
+| brightness | number | 0 | 图层发光强度 |
+| opacity | number | 1.0 | 图层透明度(0-1) |
+
+**per-feature properties（由 UE 端逐个解析）:**
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | number\|string | 区块唯一标识 |
+| name | string | 区块名称 |
+| color | string\|Array | 面颜色，`#RRGGBB` 或 `[r,g,b]`(0-1 归一化) |
+| opacity | number | 该 feature 的透明度(0-1) |
+| baseHeight | number | 基础高度(拉伸起始)，单位米 |
+| thickness | number | 拉伸厚度，单位米 |
+
+```javascript
+new PolygonMesh({
+    brightness: 0.1,
+    opacity: 0.3,
+    data: {
+        type: 'FeatureCollection',
+        features: [{
+            type: 'Feature',
+            properties: {id: 1, name: '西北区块', color: '#FF5733',
+                opacity: 0.08, baseHeight: 20, thickness: 30},
+            geometry: {type: 'MultiPolygon', coordinates: [[[[113.1895, 23.2186],
+                [113.1900, 23.2192], [113.1902, 23.2188],
+                [113.1897, 23.2184], [113.1895, 23.2186]]]]},
+        }],
+    },
+});
+```
+
+> 材质属性在构造函数中传入；入场后修改 `visible` 控制显隐不会重发几何数据。数据体积集中在 `coordinates`，如需压缩请在引擎层开启 `enableV2: true`。
+
 ## 几何形状详解
 
 所有几何形状继承自 Shape，共享通用属性。
@@ -618,11 +659,14 @@ engine.addEventListener('customResponse', (res) => {
 |------|------|--------|------|
 | url | string | - | WebSocket 服务地址（仅构造时传入） |
 | message | object | `{}` | 订阅消息体，如 `{crossId: '12'}`（可修改触发重新订阅） |
+| area | number[] | `[]` | 车流剔除边界，扁平数组`[经度,纬度,...]`，至少3个点（长度为偶数且>=6）。可修改，超出边界的车流被销毁 |
 | traceToGround | boolean | true | 是否贴地（仅构造时传入） |
 | traceLength | number | 10 | 射线检测距离(米)（仅构造时传入） |
 | visible | boolean | true | 显隐 |
 
 **方法:** `disconnect()` 断开连接、`reconnect()` 重新连接。
+
+> `message` 赋值会立即触发重新订阅；`area` 赋值只做校验不触发更新，随下次 `message` 更新一并下发。`connectState` 为只读，只能通过 `disconnect()`/`reconnect()` 变更。
 
 ### TJInfoLightLayer TJ信控灯图层
 
@@ -654,10 +698,10 @@ engine.addEventListener('customResponse', (res) => {
 | loopMode | number | 0 | 循环模式：0停止 / 1从起点重新开始 / 2掉头返回 |
 | traceToGround | boolean | true | 是否贴地 |
 | traceLength | number | 20 | 射线检测距离(米) |
-| state | number | 0 | 状态：0暂停 / 1继续（**唯一可实例化后修改的属性**） |
+| startPaused | boolean | false | 是否以暂停状态入场（true 则入场后停在起点，需 `resume()` 才移动） |
 | onNavigationStart | Function | - | 开始移动回调 |
 | onNavigationFinish | Function | - | 结束移动回调 |
 
 **方法:** `pause()` 暂停、`resume()` 继续。
 
-> **注意**：除 `state` 外，其余参数均为只读，实例化后不可修改。
+> **注意**：除 `state`（0 暂停 / 1 继续，**唯一可实例化后修改的属性**）外，其余参数均为只读。`state` 初值由 `startPaused` 决定（`startPaused: true` → 0，否则 1），不要在构造参数中直接传 `state`。`linePoints.length % 3 !== 0` 时构造会抛错。

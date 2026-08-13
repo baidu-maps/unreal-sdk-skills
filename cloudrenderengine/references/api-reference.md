@@ -38,6 +38,7 @@ import {
 
     // 面类 (Polygon)
     Polygon,                // 多边形
+    PolygonMesh,            // 多边形拉伸体(高性能)
 
     // 几何形状 (Shape)
     Shape,                  // 形状基类
@@ -148,8 +149,22 @@ new CloudRenderEngine({
     printStats: boolean,           // 打印状态信息
     UDSParams: object,             // 天气系统默认参数
     isSequencer: boolean,          // 离线渲染场景 (默认false)
+    playoutDelayHint: number,      // 视频播放缓冲提示(秒), 默认0=零缓冲最低延迟
 })
+```
 
+**playoutDelayHint 使用说明：**
+
+默认 `0` 为零缓冲最低延迟（历史行为）。低运动场景（如静态大屏）若出现周期性微顿挫（编码器偶发大帧/关键帧突刺造成到达抖动），可设 `0.03~0.05`（30~50ms），用等量画面延迟换取完全平滑。无此问题的项目不传即可，行为不变。内部同时写入 W3C 标准的 `receiver.jitterBufferTarget`（毫秒），兼容新旧 Chrome。
+
+```javascript
+const engine = new CloudRenderEngine({
+    projectName: 'your-project',
+    playoutDelayHint: 0.04,        // 静态大屏场景消除微顿挫
+});
+```
+
+```javascript
 // 本地渲染模式 (突破 4K 分辨率限制，需要高性能客户端)
 new CloudRenderEngine({
     renderMode: 'inner',           // 只需这一个参数
@@ -390,6 +405,50 @@ const capacity = await Engine.CloudRenderEngine.DispatchServer.GetAllCapacity();
 const capacityInfo = await Engine.CloudRenderEngine.DispatchServer.GetAllCapacityInfo();
 ```
 
+#### 多 host 入口高可用
+
+`host` 支持传入多个地址（多台调度服务共享同一 Consul 集群），SDK 在创建任务前自动探活并跳过不可用节点，任一台宕机不影响业务，无需额外部署 NGINX 等负载均衡器。三种写法效果一致：
+
+```javascript
+const DS = Engine.CloudRenderEngine.DispatchServer;
+
+// 1. 单个地址(原有写法，完全兼容)
+DS.host = 'http://10.18.15.2:8017';
+
+// 2. 逗号分隔的多个地址
+DS.host = 'http://10.18.15.2:8017,http://10.18.15.3:8017';
+
+// 3. 地址数组(推荐，可读性最好)
+DS.host = ['http://10.18.15.2:8017', 'http://10.18.15.3:8017', 'http://10.18.15.4:8017'];
+
+// 读取归一化后的完整地址列表
+console.log(DS.hosts);   // ['http://10.18.15.2:8017', ...]
+
+// 读取当前生效的单个地址(有任务时返回任务所在节点，否则返回列表首个)
+console.log(DS.host);
+
+// 探活缓存时长(ms)，默认 3000；设为 0 表示每次创建任务都实时探活
+DS.hostProbeCacheTTL = 3000;
+```
+
+**工作机制：**
+
+- `CreateTask` 前并行探测所有 host 的 `GET /api/health/ready`，过滤掉关机、超时、Consul 异常或无可用容量的节点；旧版调度服务无该接口（404）时自动降级用 `/api/nodes/capacity` 探测
+- 可用节点按容量档位降序、**同档内随机打散**后依次尝试，避免请求永远压在第一台
+- 某节点创建失败会自动降级到下一个；全部失败则作废探活缓存、强制重新探测再试一轮
+- 任务创建成功后 SDK 记住实际落点节点，后续 `KillTask` 打到同一节点
+
+> **注意**：多 host 提供的是**入口冗余**，不是渲染任务的负载均衡。任务最终分配到哪台渲染机由调度服务基于 Consul 全局数据决定，与请求打到哪个入口无关。
+
+**调度服务健康检查接口**（免认证，可用于运维监控或外部 LB）：
+
+| 接口 | 用途 | 说明 |
+|------|------|------|
+| `GET /api/health` | 存活探测(liveness) | 极轻量，Web 进程能响应即返回 200，不查 Consul |
+| `GET /api/health/ready` | 就绪探测(readiness) | 额外检查 Consul 连通性与当前 tag 剩余容量，不健康或无容量返回 503。SDK 多 host 择活使用此接口 |
+
+`/api/health/ready` 响应中的 `status` 取值：`ok`(200) / `no_capacity`(503，进程与 Consul 正常但无空闲容量，应跳过但不算故障) / `consul_unavailable`(503) / `error`(503)。
+
 ### 加载连接
 
 ```javascript
@@ -567,6 +626,49 @@ new Polygon({
     map: string,
 });
 ```
+
+### PolygonMesh 多边形拉伸体 (高性能)
+
+高性能拉伸多边形 Mesh 面，数据完全透传给 UE 端解析（不拆壳、不三角化、不扁平化），适合大批量区块拉伸渲染。支持 `Polygon` / `MultiPolygon`，每个 feature 可独立设置颜色、透明度、基础高度与拉伸厚度。
+
+```javascript
+const polygonMesh = new Engine.PolygonMesh({
+    brightness: 0.1,        // 图层发光强度, 默认0
+    opacity: 0.3,           // 图层透明度(0-1), 默认1.0
+    data: {
+        type: 'FeatureCollection',
+        features: [{
+            type: 'Feature',
+            properties: {
+                id: 1,              // 区块唯一标识
+                name: '西北区块',    // 区块名称
+                color: '#FF5733',   // 面颜色: #十六进制 或 [r,g,b](0-1归一化)
+                opacity: 0.08,      // 该 feature 的透明度(0-1)
+                baseHeight: 20,     // 基础高度(拉伸起始), 单位米
+                thickness: 30,      // 拉伸厚度, 单位米
+            },
+            geometry: {
+                type: 'MultiPolygon',   // 支持 Polygon / MultiPolygon
+                coordinates: [[[[113.1895, 23.2186], [113.1900, 23.2192],
+                    [113.1902, 23.2188], [113.1897, 23.2184], [113.1895, 23.2186]]]],
+            },
+        }],
+    },
+});
+engine.addToScene(polygonMesh);
+
+// 也可通过 setData 更新数据
+polygonMesh.setData(geoJsonData);
+
+// 控制显隐(不重发几何数据)
+polygonMesh.visible = false;
+```
+
+**关键说明：**
+- per-feature 的 `color` / `opacity` / `baseHeight` / `thickness` 由 UE 端从 `properties` 逐个解析
+- 顶层的 `brightness` / `opacity` 为图层级材质参数，在构造函数中设置
+- 更新 `visible` 不会重发 `jsondata`（几何数据），性能友好
+- 数据体积主要在 `coordinates`；如需压缩可开启 `new CloudRenderEngine({ enableV2: true })`，descriptor 超阈值时自动 gzip
 
 ### Particle 粒子系统
 
@@ -791,11 +893,16 @@ const wsTraffic = new Engine.WSTrafficLayer({
     message: { crossId: '12' },      // 订阅消息体(可修改触发重新订阅)
     traceToGround: true,             // 是否贴地, 默认true(仅构造时传入)
     traceLength: 10,                 // 射线检测距离(米), 默认10(仅构造时传入)
+    // 车流剔除边界: 扁平数组[经度,纬度,经度,纬度,...], 至少3个点(长度为偶数且>=6)
+    area: [106.6195, 26.6495, 106.6194, 26.6494, 106.6194, 26.6492],
 });
 engine.addToScene(wsTraffic);
 
 // 切换订阅内容(触发更新)
 wsTraffic.message = { crossId: '13' };
+
+// 修改剔除边界(不立即触发更新, 随下次 message 更新一并下发)
+wsTraffic.area = [106.62, 26.65, 106.61, 26.64, 106.60, 26.63];
 
 // 断开/重新连接
 wsTraffic.disconnect();
@@ -804,6 +911,8 @@ wsTraffic.reconnect();
 // 控制显隐
 wsTraffic.visible = false;
 ```
+
+> **area 校验规则**：必须是扁平的 `[经, 纬, 经, 纬, ...]` 一维数组，长度为偶数且 >= 6（至少 3 个点），否则构造/赋值时抛错。超出边界的车流会被销毁。
 
 ### TJInfoLightLayer TJ信控灯图层
 
@@ -842,7 +951,7 @@ const personLine = new Engine.PersonLine({
     loopMode: 0,                     // 循环模式: 0停止 | 1从起点重新开始 | 2掉头返回
     traceToGround: true,             // 是否贴地, 默认true
     traceLength: 20,                 // 射线检测距离(米), 默认20
-    state: 0,                        // 状态: 0暂停 | 1继续, 默认0
+    startPaused: false,              // 是否以暂停状态入场, 默认false(true则停在起点, 需 resume() 才移动)
     onNavigationStart: (e) => console.log('开始移动', e),
     onNavigationFinish: (e) => console.log('结束移动', e),
 });
@@ -853,7 +962,7 @@ personLine.pause();
 personLine.resume();
 ```
 
-> **注意**：除 `state` 外，其余参数均为只读，实例化后不可修改。
+> **注意**：除 `state`（0 暂停 / 1 继续）外，其余参数均为只读，实例化后不可修改。`state` 初值由 `startPaused` 决定（`startPaused: true` → `state = 0`，否则为 1），不要在构造参数里直接传 `state`。
 
 ## 关卡管理 (LevelManage)
 

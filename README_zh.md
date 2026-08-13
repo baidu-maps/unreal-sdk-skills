@@ -1,6 +1,6 @@
 # CloudRenderEngine Skill
 
-> **Version**: 1.9.3
+> **Version**: 1.9.4
 > **Purpose**: 帮助 Claude AI 理解和使用 mapv-cloudrenderengine（百度地图云渲染引擎）进行 3D 数字孪生可视化开发
 
 ---
@@ -32,7 +32,7 @@
 | 类别 | 包含功能 |
 |------|---------|
 | **基础对象** | 点标注、线、面、集群点、文本标签 |
-| **可视化** | 热力图、动态线、OD 线、Polygon |
+| **可视化** | 热力图、动态线、OD 线、Polygon、PolygonMesh（高性能拉伸多边形） |
 | **交通** | 路况、信号灯、车辆、停车场、潮汐车道 |
 | **特效** | 粒子、雷达、涟漪、爆炸、光柱 |
 | **城市** | 建筑生长、楼宇拆解、情报板、信息牌 |
@@ -276,7 +276,7 @@ EventDispatcher
 
 ### 版本信息位置
 
-- **当前版本**: 查看 `SKILL.md` 顶部的 `version: 1.9.3`
+- **当前版本**: 查看 `SKILL.md` 顶部的 `version: 1.9.4`
 - **更新日志**: 目前在 `SKILL.md` 中内联说明
 
 ### 文档编写原则
@@ -315,5 +315,5 @@ EventDispatcher
 
 ---
 
-**Last Updated**: 2026-02-10
+**Last Updated**: 2026-08-13
 **Maintained by**: 百度地图开放平台数字底座团队

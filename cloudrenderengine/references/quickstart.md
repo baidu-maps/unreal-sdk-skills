@@ -39,6 +39,11 @@ CloudRenderEngine.DispatchServer.username = 'admin';               // 可选，�
 CloudRenderEngine.DispatchServer.password = 'admin';               // 可选，默认 admin
 ```
 
+> **多节点高可用（可选）**：调度服务部署多台时，`host` 支持数组或逗号分隔字符串，SDK 会在创建任务前自动探活并跳过不可用节点，无需额外部署负载均衡器：
+> ```js
+> CloudRenderEngine.DispatchServer.host = ['http://node1:8017', 'http://node2:8017'];
+> ```
+
 ### 第 2 步：检查可用渲染容量（必须 > 0 才能连接）
 
 ```js

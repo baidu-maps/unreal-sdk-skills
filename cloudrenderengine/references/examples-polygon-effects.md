@@ -120,6 +120,87 @@ engine.addToScene(polygonWithHole);
 
 ---
 
+## PolygonMesh 高性能拉伸多边形
+
+大批量区块拉伸渲染场景优先用 `PolygonMesh`。数据完全透传给 UE 端解析，每个 feature 可独立设置颜色、透明度、基础高度和拉伸厚度。
+
+```javascript
+import { PolygonMesh } from 'mapv-cloudrenderengine';
+
+const polygonMesh = new PolygonMesh({
+    brightness: 0.1,    // 图层发光强度, 默认0
+    opacity: 0.3,       // 图层透明度, 默认1.0
+    data: {
+        type: 'FeatureCollection',
+        features: [
+            {
+                type: 'Feature',
+                properties: {
+                    id: 1,
+                    name: '西北区块',
+                    color: '#FF5733',   // 或 [1, 0.34, 0.2] (0-1 归一化)
+                    opacity: 0.08,
+                    baseHeight: 20,     // 拉伸起始高度(米)
+                    thickness: 30,      // 拉伸厚度(米)
+                },
+                geometry: {
+                    type: 'MultiPolygon',
+                    coordinates: [[[
+                        [113.1895, 23.2186],
+                        [113.1900, 23.2192],
+                        [113.1902, 23.2188],
+                        [113.1897, 23.2184],
+                        [113.1895, 23.2186]
+                    ]]]
+                }
+            },
+            {
+                type: 'Feature',
+                properties: {
+                    id: 2,
+                    name: '东南区块',
+                    color: '#33A1FF',
+                    opacity: 0.15,
+                    baseHeight: 0,
+                    thickness: 60,
+                },
+                geometry: {
+                    type: 'Polygon',
+                    coordinates: [[
+                        [113.1910, 23.2170],
+                        [113.1918, 23.2176],
+                        [113.1922, 23.2168],
+                        [113.1912, 23.2164],
+                        [113.1910, 23.2170]
+                    ]]
+                }
+            }
+        ]
+    }
+});
+
+engine.addToScene(polygonMesh);
+
+// 更新数据
+polygonMesh.setData(newGeoJson);
+
+// 显隐控制(不重发几何数据，性能友好)
+polygonMesh.visible = false;
+```
+
+**Polygon vs PolygonMesh 选型:**
+
+| | Polygon | PolygonMesh |
+|---|---------|-------------|
+| 填充样式 | 支持 fillStyle(Empty/Stripe/Matrix/Custom) | 不支持，纯实体拉伸 |
+| per-feature 样式 | 统一图层样式 | 每个 feature 独立 color/opacity/baseHeight/thickness |
+| 数据处理 | JS 侧处理后下发 | 完全透传，UE 端解析 |
+| 适用场景 | 少量区域、需要花纹填充 | 大批量区块拉伸、性能优先 |
+
+> 数据体积集中在 `coordinates`。如需压缩，在引擎层开启 `new CloudRenderEngine({ enableV2: true })`，descriptor 超阈值时自动 gzip。
+
+---
+
 ## Particle 粒子效果
 
 ```javascript

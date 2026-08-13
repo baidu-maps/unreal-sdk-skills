@@ -2,7 +2,7 @@
 
 > [中文版本 (Chinese Version)](./README_zh.md)
 
-> **Version**: 1.9.3
+> **Version**: 1.9.4
 > **Purpose**: Help Claude AI understand and use mapv-cloudrenderengine (Baidu Maps Cloud Rendering Engine) for 3D digital twin visualization development
 
 ---
@@ -33,7 +33,7 @@ Claude will automatically activate this skill when developers ask about:
 | Category | Features |
 |----------|----------|
 | **Basic Objects** | Point markers, lines, polygons, cluster points, text labels |
-| **Visualization** | Heatmaps, dynamic lines, OD lines, Polygons |
+| **Visualization** | Heatmaps, dynamic lines, OD lines, Polygons, PolygonMesh (high-performance extrusion) |
 | **Traffic** | Road conditions, traffic lights, vehicles, parking lots, tidal lanes |
 | **Effects** | Particles, radar, ripples, explosions, light beams |
 | **City** | Building growth, building decomposition, information boards |
@@ -268,7 +268,7 @@ EventDispatcher
 
 ### Version Information Location
 
-- **Current Version**: See `version: 1.9.3` at the top of `SKILL.md`
+- **Current Version**: See `version: 1.9.4` at the top of `SKILL.md`
 - **Changelog**: Currently inline in `SKILL.md`
 
 ### Documentation Writing Principles
@@ -307,5 +307,5 @@ EventDispatcher
 
 ---
 
-**Last Updated**: 2026-02-10
+**Last Updated**: 2026-08-13
 **Maintained by**: Baidu Maps Open Platform Digital Infrastructure Team

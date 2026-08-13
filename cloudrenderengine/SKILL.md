@@ -1,7 +1,7 @@
 ---
 name: cloudrenderengine
-description: This skill should be used when the user asks to "use mapv-cloudrenderengine", "create 3D visualization", "add map markers", "render geographic data", "use cloud rendering engine", "create lines/polygons/points on map", "add particle effects", "control weather/time", "use camera navigation", "初始化云渲染引擎", "创建云渲染demo", "快速接入调度服务", "生成云渲染项目", "添加地图标注", "绘制轨迹线", "创建热力图", "设置天气效果", "相机飞行动画", "获取点击坐标", "clickLocation事件", "动态资产AssetLayer", "自动驾驶车辆", "大规模路况", "信号灯接入", "关卡切换", "WebRTC监控", "建筑生长动画", "情报板编辑", "楼宇拆解", "模型剖切", "模型爆炸", "模型拆卸组装", "L3精模控制", "模型高亮", "骨骼动画", "水面模拟", "目标环绕", "数字人轨迹", "特殊车流", "信控灯", "ModelSlice", "ExplodeControl", "L3ModelControl", "SkeletonAnimControl", "WaterSimulation", "OrbitAroundFocusPoint", "PersonLine", "WSTrafficLayer", "TJInfoLightLayer", or needs guidance on CloudRenderEngine API, class inheritance, data formats, and best practices.
-version: 1.9.3
+description: This skill should be used when the user asks to "use mapv-cloudrenderengine", "create 3D visualization", "add map markers", "render geographic data", "use cloud rendering engine", "create lines/polygons/points on map", "add particle effects", "control weather/time", "use camera navigation", "初始化云渲染引擎", "创建云渲染demo", "快速接入调度服务", "生成云渲染项目", "添加地图标注", "绘制轨迹线", "创建热力图", "设置天气效果", "相机飞行动画", "获取点击坐标", "clickLocation事件", "动态资产AssetLayer", "自动驾驶车辆", "大规模路况", "信号灯接入", "关卡切换", "WebRTC监控", "建筑生长动画", "情报板编辑", "楼宇拆解", "模型剖切", "模型爆炸", "模型拆卸组装", "L3精模控制", "模型高亮", "骨骼动画", "水面模拟", "目标环绕", "数字人轨迹", "特殊车流", "信控灯", "ModelSlice", "ExplodeControl", "L3ModelControl", "SkeletonAnimControl", "WaterSimulation", "OrbitAroundFocusPoint", "PersonLine", "WSTrafficLayer", "TJInfoLightLayer", "多边形拉伸体", "高性能多边形", "PolygonMesh", "调度服务多host", "调度服务高可用", "多host配置", "视频卡顿优化", "playoutDelayHint", "车流剔除边界", or needs guidance on CloudRenderEngine API, class inheritance, data formats, and best practices.
+version: 1.9.4
 ---
 
 # mapv-cloudrenderengine 开发指南
@@ -39,7 +39,7 @@ import * as Engine from 'mapv-cloudrenderengine';
 EventDispatcher → Object3D → Shape
                            ├── Point, IconPoint, TextPoint, BasicLabel, ClusterPoint
                            ├── Line, ODLine
-                           ├── Polygon
+                           ├── Polygon, PolygonMesh (高性能拉伸多边形)
                            ├── Cone, Cube, Cylinder, Sphere, Circle...
                            ├── Particle, Radar, Ripple, Decal, Heatmap...
                            ├── ModelSlice (模型剖切)
@@ -187,6 +187,8 @@ import * as Engine from 'mapv-cloudrenderengine';
 
 // 1. 配置调度服务
 Engine.CloudRenderEngine.DispatchServer.host = 'http://your-server:8017';
+// 多节点入口高可用（可选）：支持数组或逗号分隔字符串，SDK 自动跳过不可用节点
+// Engine.CloudRenderEngine.DispatchServer.host = ['http://node1:8017', 'http://node2:8017'];
 Engine.CloudRenderEngine.DispatchServer.username = 'your-username';
 Engine.CloudRenderEngine.DispatchServer.password = 'your-password';
 
@@ -368,6 +370,7 @@ assetLayer.addEventListener('mousedown', (e) => {
 | ODLine | OD线 | 起终点样式 |
 | **面类** | | |
 | Polygon | 自定义区域 | fillStyle(Empty/Stripe/Matrix), height |
+| PolygonMesh | 高性能拉伸多边形 | brightness, opacity, per-feature properties |
 | Circle | 平面圆 | radius, 贴图动画 |
 | Plane | 平铺面 | width, height, map |
 | **体类** | | |
@@ -444,6 +447,10 @@ assetLayer.addEventListener('mousedown', (e) => {
 **获取点击坐标？** 使用 `engine.camera.addEventListener('clickLocation', ...)` 事件。
 
 **网络卡顿？** 通过 `onWebRtcConnectionStats` 监控 RTT、丢包率、码率等指标诊断问题。
+
+**静态大屏画面周期性微顿挫？** 网络指标正常但画面偶发抖动，通常是编码器大帧/关键帧突刺造成的到达抖动。创建引擎时设 `playoutDelayHint: 0.04`（30~50ms），用等量画面延迟换取平滑；默认 `0` 为零缓冲最低延迟。
+
+**调度服务单点故障？** `DispatchServer.host` 支持传数组或逗号分隔的多个地址，SDK 自动探活并跳过不可用节点（详见 `references/api-reference.md` 的"多 host 入口高可用"）。
 
 ## 参考文档
 
