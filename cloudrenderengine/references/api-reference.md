@@ -30,10 +30,12 @@ import {
     ClusterPoint,           // 点聚合
     WebViewPoint,           // Web视图点
     Light,                  // 光源
+    DynamicIcon,            // 大规模动态图标点
 
     // 线类 (Line)
     Line,                   // 线
     ODLine,                 // OD线 (起点-终点)
+    PipeLine,               // 三维管线(圆管)
     LargeRoadCondition,     // 大规模路况
 
     // 面类 (Polygon)
@@ -535,6 +537,53 @@ new Line({
 });
 ```
 
+### PipeLine 三维管线 (圆管)
+
+沿一组三维坐标点生成圆管，支持分段着色、半径与径向分段数控制。入场下发 `Gis_AddCommonGISLayer`；运行期仅修改 `option` 或 `brightness` 触发更新，其余属性静默改值需配合下发。
+
+```javascript
+const pipe = new Engine.PipeLine({
+    pipeline: [                             // 路径点: x=经度 y=纬度 z=高度(米)
+        { x: 113.31865, y: 23.51173, z: 118.2 },
+        { x: 113.31941, y: 23.51416, z: 126.0 },
+        { x: 113.31834, y: 23.52160, z: 139.2 },
+    ],
+    colors: [                               // 分段颜色(点数-1段), 范围[0-1]
+        { r: 0, g: 1, b: 1, a: 0.3 },
+        { r: 1, g: 0.1, b: 0.1, a: 0.3 },
+    ],
+    color: { r: 1, g: 0, b: 0, a: 0.5 },    // 基础颜色, 默认白色
+    brightness: 0.1,                        // 发光强度, 默认0
+    radius: 10,                             // 半径(米), 默认1
+    radialSegments: -1,                     // 径向分段数, -1 引擎自动
+    pipeID: 0,                              // 管线ID(批量更新用)
+});
+// 可选: 获取 UE 回传的 PipeID (content.pipelineID)
+pipe.addEventListener('createFinished', e => { pipe.pipeID = e.content.pipelineID; });
+engine.addToScene(pipe);
+
+// 运行期更新 (均触发 Gis_UpdateCommonGISLayer)
+pipe.setColors([{ r: 0, g: 1, b: 1, a: 0.8 }], 0);   // 批量分段着色
+pipe.setColorByIndex({ r: 1, g: 1, b: 0, a: 1 }, 0); // 按索引改单段
+pipe.addPipe([{ x: 113.320, y: 23.520, z: 120 }]);   // 追加管线
+pipe.removePipe(0);                                   // 移除指定管线
+pipe.clear();                                         // 清空
+pipe.brightness = 0.5;                                // 改亮度(触发更新, 复位 option)
+```
+**PipeLine 参数:**
+| 参数 | 类型 | 默认 | 说明 |
+|------|------|------|------|
+| `pipeline` | Array<{x,y,z}> | [] | 路径点，x=经度 y=纬度 z=高度(米) |
+| `colors` | Array<{r,g,b,a}> | [] | 分段颜色(点数-1)，范围[0-1] |
+| `color` | {r,g,b,a} | 白 | 基础颜色 |
+| `brightness` | number | 0 | 发光强度(触发更新，复位 option) |
+| `radius` | number | 1 | 半径(米) |
+| `radialSegments` | number | -1 | 径向分段数(-1 自动) |
+| `pipeID` | number | 0 | 管线ID(批量更新) |
+| `option` | string | '' | clear/removePipe/setColors/setColorByIndex/addPipe |
+
+**方法:** `setColors(colors,pipeID)`、`setColorByIndex(color,pipeID)`、`addPipe(pipeline)`、`removePipe(pipeID)`、`clear()`
+
 ### IconPoint 图标点
 
 ```javascript
@@ -606,6 +655,50 @@ new BasicLabel({
     fadeIn: boolean,
 });
 ```
+
+### DynamicIcon 大规模动态图标点
+
+动态大规模图标点（动态 IconPoint）。基于 **id** 做点位增删与移动 diff，支持每点单独设置图片/尺寸/缩放、平滑或瞬移两种移动模式、屏幕重叠避让等。运行期仅 `setPoints` / `setImages` 触发更新，其余配置项静默改值随下次更新一并下发。
+
+```javascript
+const layer = new Engine.DynamicIcon({
+    imageUrl: 'https://x/uav.png',      // 默认图(URL或base64)
+    size: [64, 64],                     // 默认宽高(px), 默认[64,64]
+    scale: 1.0,                         // 默认缩放, 实际尺寸=size×scale
+    defaultMoveMode: 'smooth',          // 'smooth' 平滑 | 'teleport' 瞬移
+    smoothMoveDuration: 0.5,            // 平滑时长(秒)
+    maxVisibleDistance: 1e8,            // 最大可见距离(厘米), 超出隐藏
+    declutter: true,                    // 屏幕重叠避让, 默认true
+    declutterMargin: 10,                // 重叠判定外扩(px)
+    data: [                             // 初始点位, id/lng/lat 必填
+        { id: 1, lng: 113.31865, lat: 23.51173, alt: 118.2 },
+        { id: 2, lng: 113.31941, lat: 23.51416, alt: 126.0, moveMode: 'teleport' },
+    ],
+});
+engine.addToScene(layer);
+
+// 更新点位(移动/增删, 按 id diff), 未出现的 id 被移除
+layer.setPoints([
+    { id: 1, lng: 113.31952, lat: 23.51234, alt: 125.4, scale: 1.2 },
+    { id: 2, lng: 113.31853, lat: 23.51342, alt: 115.8 },
+]);
+// 批量赋图(一张图赋给多个 id)
+layer.setImages([{ image: 'https://x/dji.png', id: [1, 2] }]);
+```
+**DynamicIcon 参数:**
+| 参数 | 类型 | 默认 | 说明 |
+|------|------|------|------|
+| `imageUrl` | string | '' | 默认图(URL或base64) |
+| `size` | [w,h] | [64,64] | 默认宽高(px) |
+| `scale` | number | 1.0 | 默认缩放 |
+| `defaultMoveMode` | string | 'smooth' | 平滑 / 瞬移 |
+| `smoothMoveDuration` | number | 0.5 | 平滑时长(秒) |
+| `maxVisibleDistance` | number | 1e8 | 最大可见距离(厘米) |
+| `declutter` | boolean | true | 屏幕重叠避让 |
+| `declutterMargin` | number | 10 | 重叠判定外扩(px) |
+| `data` | Array | [] | 点位 {id,lng,lat,alt?,imageUrl?,size?,scale?,customData?,moveMode?}，id/lng/lat 必填 |
+
+**方法:** `setPoints(points)` 更新点位(按 id diff)、`setImages(images)` 批量赋图 `[{image, id:[...]}]`
 
 ### Polygon 多边形
 

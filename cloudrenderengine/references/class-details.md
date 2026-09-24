@@ -195,6 +195,30 @@ new Light({
 });
 ```
 
+### DynamicIcon 大规模动态图标点
+
+继承自 Object3D。动态大规模图标点，基于 id 做点位增删与移动 diff，支持每点单独设置图片/尺寸/缩放、平滑(smooth)或瞬移(teleport)两种移动模式、屏幕重叠避让(declutter)。适合无人机群、车队等大规模动态点位。
+
+**构造参数:** `imageUrl`(默认图) `size`([w,h]) `scale` `defaultMoveMode` `smoothMoveDuration` `maxVisibleDistance` `declutter` `declutterMargin` `data`(初始点位) `visible`
+
+```javascript
+new DynamicIcon({
+    imageUrl: 'https://x/uav.png',
+    size: [64, 64],
+    defaultMoveMode: 'smooth',
+    data: [
+        { id: 1, lng: 113.31865, lat: 23.51173, alt: 118.2 },
+        { id: 2, lng: 113.31941, lat: 23.51416, alt: 126.0, moveMode: 'teleport' },
+    ],
+});
+```
+
+**关键方法:**
+- `setPoints(points)`: 更新点位数组（移动/增删），按 id diff，触发一次更新
+- `setImages(images)`: 批量赋图，`[{ image, id: [1,2] }]`，一张图赋给多个 id，随下次更新携带
+
+> 运行期仅 `setPoints` / `setImages` 触发更新；其余属性构造后赋值只静默改值，随下一次更新一并下发。每点位字段 {id,lng,lat,alt?,imageUrl?,size?,scale?,customData?,moveMode?}，id/lng/lat 必填。
+
 ## 线类详解
 
 ### Line 线条
@@ -285,6 +309,32 @@ new LargeRoadCondition({
     },
 });
 ```
+
+### PipeLine 三维管线 (圆管)
+
+继承自 Object3D。沿一组三维坐标点生成圆管，支持分段着色、半径与径向分段数控制，适合管道、隧道、地下管网等三维线状可视化。
+
+**构造参数:** `pipeline`(路径点 {x:经度,y:纬度,z:高度米}) `colors`(分段颜色，(点数-1)段) `color`(基础色) `brightness` `radius`(半径米) `radialSegments`(径向分段，-1自动) `pipeID` `option` `visible`
+
+```javascript
+new PipeLine({
+    pipeline: [
+        { x: 113.31865, y: 23.51173, z: 118.2 },
+        { x: 113.31941, y: 23.51416, z: 126.0 },
+        { x: 113.31834, y: 23.52160, z: 139.2 },
+    ],
+    colors: [
+        { r: 0, g: 1, b: 1, a: 0.3 },
+        { r: 1, g: 0.1, b: 0.1, a: 0.3 },
+    ],
+    radius: 10,
+    brightness: 0.1,
+});
+```
+
+**关键方法:** `setColors(colors, pipeID)` 批量分段着色、`setColorByIndex(color, pipeID)` 按索引改单段、`addPipe(pipeline)` 追加管线、`removePipe(pipeID)` 移除、`clear()` 清空。
+
+> PipeID 由 UE 在管线创建完成后通过 `createFinished` 事件回传（`content.pipelineID`），也可前端自增维护。运行期仅修改 `option` / `brightness` 触发更新，其余属性静默改值需配合下发。
 
 ## 面类详解
 

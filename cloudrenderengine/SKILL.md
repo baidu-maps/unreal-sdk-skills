@@ -1,7 +1,7 @@
 ---
 name: cloudrenderengine
-description: This skill should be used when the user asks to "use mapv-cloudrenderengine", "create 3D visualization", "add map markers", "render geographic data", "use cloud rendering engine", "create lines/polygons/points on map", "add particle effects", "control weather/time", "use camera navigation", "初始化云渲染引擎", "创建云渲染demo", "快速接入调度服务", "生成云渲染项目", "添加地图标注", "绘制轨迹线", "创建热力图", "设置天气效果", "相机飞行动画", "获取点击坐标", "clickLocation事件", "动态资产AssetLayer", "自动驾驶车辆", "大规模路况", "信号灯接入", "关卡切换", "WebRTC监控", "建筑生长动画", "情报板编辑", "楼宇拆解", "模型剖切", "模型爆炸", "模型拆卸组装", "L3精模控制", "模型高亮", "骨骼动画", "水面模拟", "目标环绕", "数字人轨迹", "特殊车流", "信控灯", "ModelSlice", "ExplodeControl", "L3ModelControl", "SkeletonAnimControl", "WaterSimulation", "OrbitAroundFocusPoint", "PersonLine", "WSTrafficLayer", "TJInfoLightLayer", "多边形拉伸体", "高性能多边形", "PolygonMesh", "调度服务多host", "调度服务高可用", "多host配置", "视频卡顿优化", "playoutDelayHint", "车流剔除边界", or needs guidance on CloudRenderEngine API, class inheritance, data formats, and best practices.
-version: 1.9.4
+description: This skill should be used when the user asks to "use mapv-cloudrenderengine", "create 3D visualization", "add map markers", "render geographic data", "use cloud rendering engine", "create lines/polygons/points on map", "add particle effects", "control weather/time", "use camera navigation", "初始化云渲染引擎", "创建云渲染demo", "快速接入调度服务", "生成云渲染项目", "添加地图标注", "绘制轨迹线", "创建热力图", "设置天气效果", "相机飞行动画", "获取点击坐标", "clickLocation事件", "动态资产AssetLayer", "自动驾驶车辆", "大规模路况", "信号灯接入", "关卡切换", "WebRTC监控", "建筑生长动画", "情报板编辑", "楼宇拆解", "模型剖切", "模型爆炸", "模型拆卸组装", "L3精模控制", "模型高亮", "骨骼动画", "水面模拟", "目标环绕", "数字人轨迹", "特殊车流", "信控灯", "ModelSlice", "ExplodeControl", "L3ModelControl", "SkeletonAnimControl", "WaterSimulation", "OrbitAroundFocusPoint", "PersonLine", "WSTrafficLayer", "TJInfoLightLayer", "多边形拉伸体", "高性能多边形", "PolygonMesh", "调度服务多host", "调度服务高可用", "多host配置", "视频卡顿优化", "playoutDelayHint", "车流剔除边界", "PipeLine", "三维管线", "圆管管线", "DynamicIcon", "大规模动态图标点", "动态图片点", or needs guidance on CloudRenderEngine API, class inheritance, data formats, and best practices.
+version: 1.9.5
 ---
 
 # mapv-cloudrenderengine 开发指南
@@ -37,8 +37,8 @@ import * as Engine from 'mapv-cloudrenderengine';
 ### 类继承关系
 ```
 EventDispatcher → Object3D → Shape
-                           ├── Point, IconPoint, TextPoint, BasicLabel, ClusterPoint
-                           ├── Line, ODLine
+                           ├── Point, IconPoint, TextPoint, BasicLabel, ClusterPoint, DynamicIcon (大规模动态图标点)
+                           ├── Line, ODLine, PipeLine (三维管线/圆管)
                            ├── Polygon, PolygonMesh (高性能拉伸多边形)
                            ├── Cone, Cube, Cylinder, Sphere, Circle...
                            ├── Particle, Radar, Ripple, Decal, Heatmap...
@@ -365,9 +365,11 @@ assetLayer.addEventListener('mousedown', (e) => {
 | BasicLabel | 自定义标签 | texture, width, height |
 | ClusterPoint | 点聚合 | 聚合距离、样式 |
 | WebViewPoint | 场景空间渲染web元素 | url, width, height |
+| DynamicIcon | 大规模动态图标点 | imageUrl, size, scale, defaultMoveMode, declutter |
 | **线类** | | |
 | Line | 线条 | style(solid/dashed/arrow), width, speed |
 | ODLine | OD线 | 起终点样式 |
+| PipeLine | 三维管线(圆管) | pipeline, colors, radius, radialSegments |
 | **面类** | | |
 | Polygon | 自定义区域 | fillStyle(Empty/Stripe/Matrix), height |
 | PolygonMesh | 高性能拉伸多边形 | brightness, opacity, per-feature properties |

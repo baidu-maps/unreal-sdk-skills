@@ -399,3 +399,79 @@ setInterval(() => {
     addPoint(newLng, newLat, 0);
 }, 1000);
 ```
+
+---
+
+## PipeLine 三维管线 (圆管)
+
+沿一组三维坐标点生成圆管，支持分段着色、半径与径向分段数控制。适合管道、隧道、地下管网等三维线状可视化。与 `Line` 不同，`PipeLine` 是真正的三维圆管几何体，可设置半径与径向分段数。
+
+```javascript
+import { PipeLine } from 'mapv-cloudrenderengine';
+
+const pipe = new PipeLine({
+    pipeline: [                             // 路径点: x=经度 y=纬度 z=高度(米)
+        { x: 113.3186558, y: 23.5117344, z: 118.2 },
+        { x: 113.3194128, y: 23.5141645, z: 126.0 },
+        { x: 113.3198709, y: 23.5172817, z: 136.9 },
+        { x: 113.3183403, y: 23.5216069, z: 139.2 },
+    ],
+    colors: [                               // 分段颜色, 通常为(点数-1)段, 范围[0-1]
+        { r: 0, g: 1, b: 1, a: 0.3 },
+        { r: 1, g: 0.1, b: 0.1, a: 0.3 },
+        { r: 0, g: 1, b: 1, a: 0.3 },
+    ],
+    color: { r: 1, g: 0, b: 0, a: 0.5 },    // 基础颜色, 默认白色
+    brightness: 0.1,                        // 发光强度, 默认0
+    radius: 10,                             // 半径(米), 默认1
+    radialSegments: -1,                     // 径向分段数, -1 引擎自动
+});
+
+// 可选: 获取 UE 回传的 PipeID (位于 content.pipelineID)
+pipe.addEventListener('createFinished', (e) => {
+    pipe.pipeID = e.content.pipelineID;
+});
+
+engine.addToScene(pipe);
+```
+**运行期更新（均触发 `Gis_UpdateCommonGISLayer`）:**
+
+```javascript
+// 批量设置分段颜色
+pipe.setColors([
+    { r: 0, g: 1, b: 1, a: 0.8 },
+    { r: 0, g: 1, b: 1, a: 0.8 },
+    { r: 0, g: 1, b: 1, a: 0.8 },
+], 0);                                       // 第二参数为目标 pipeID
+
+// 按索引更新单段颜色
+pipe.setColorByIndex({ r: 1, g: 1, b: 0, a: 1 }, 0);
+
+// 追加一条管线
+pipe.addPipe([
+    { x: 113.3200, y: 23.5200, z: 120 },
+    { x: 113.3210, y: 23.5210, z: 122 },
+]);
+
+// 移除指定管线 / 清空全部
+pipe.removePipe(0);
+pipe.clear();
+
+// 修改发光强度(会触发更新, 并把 option 复位为空字符串)
+pipe.brightness = 0.5;
+```
+
+**PipeLine 参数:**
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `pipeline` | Array<{x,y,z}> | [] | 路径点，x=经度 y=纬度 z=高度(米) |
+| `colors` | Array<{r,g,b,a}> | [] | 分段颜色，通常(点数-1)段，范围[0-1] |
+| `color` | {r,g,b,a} | 白色 | 基础颜色，范围[0-1] |
+| `brightness` | number | 0 | 发光强度（修改触发更新，并复位 option） |
+| `radius` | number | 1 | 管线半径(米) |
+| `radialSegments` | number | -1 | 径向分段数(-1 引擎自动决定) |
+| `pipeID` | number | 0 | 管线ID，用于按管线批量更新 |
+| `option` | string | '' | 更新操作: clear/removePipe/setColors/setColorByIndex/addPipe |
+| `visible` | boolean | true | 显隐 |
+
+> **注意**: `colors` / `pipeline` / `color` / `radius` / `radialSegments` / `pipeID` 为静默属性，直接赋值只改值不触发更新，需配合 `option` 或 `brightness` 的修改一并下发。PipeID 也可由前端自增维护(0,1,2,…)。

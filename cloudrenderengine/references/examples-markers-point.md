@@ -450,3 +450,78 @@ engine.addToScene(spotLight);
 | `point` | 点光源，向所有方向发光 |
 | `spot` | 聚光灯，锥形光束 |
 | `directional` | 平行光，模拟太阳光 |
+
+---
+
+## DynamicIcon 大规模动态图标点
+
+大规模动态图标点（动态 IconPoint）。基于 **id** 做点位增删与移动 diff，支持每点单独设置图片/尺寸/缩放、平滑(smooth)或瞬移(teleport)两种移动模式、屏幕重叠避让(declutter)等。适合无人机群、车队、大规模移动目标等场景。
+
+```javascript
+import { DynamicIcon } from 'mapv-cloudrenderengine';
+
+const layer = new DynamicIcon({
+    imageUrl: 'https://example.com/uav.png', // 默认图(URL或base64), 点位未带图时使用
+    size: [64, 64],                          // 默认宽高(px), 默认[64,64]
+    scale: 1.0,                              // 默认缩放, 实际尺寸=size×scale
+    defaultMoveMode: 'smooth',               // 默认移动模式 'smooth'|'teleport'
+    smoothMoveDuration: 0.5,                 // 平滑移动时长(秒)
+    maxVisibleDistance: 1e8,                 // 最大可见距离(厘米), 超出隐藏
+    declutter: true,                         // 屏幕重叠避让开关
+    declutterMargin: 10,                     // 重叠判定额外外扩(px)
+    data: [                                  // 初始点位, id/lng/lat 必填
+        { id: 1, lng: 113.31865, lat: 23.51173, alt: 118.2 },
+        { id: 2, lng: 113.31941, lat: 23.51416, alt: 126.0, moveMode: 'teleport' },
+    ],
+});
+
+engine.addToScene(layer);
+```
+**运行期更新点位（移动 / 增删，按 id diff）:**
+
+```javascript
+// 只有 setPoints / setImages 会触发更新(Gis_UpdateCommonGISLayer)
+layer.setPoints([
+    { id: 1, lng: 113.31952, lat: 23.51234, alt: 125.4, scale: 1.2 }, // 移动+改缩放
+    { id: 2, lng: 113.31853, lat: 23.51342, alt: 115.8 },
+    { id: 3, lng: 113.32001, lat: 23.51500, alt: 120.0 },             // 新增点位
+    // 未出现在数组中的 id 将被移除
+]);
+```
+
+**批量赋图（一张图赋给多个 id，避免每点都带图）:**
+
+```javascript
+layer.setImages([
+    { image: 'https://example.com/dji.png', id: [1, 2] },
+    { image: 'https://example.com/car.png', id: [3] },
+]);
+```
+
+**每点位可透传字段:**
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `id` | 是 | 点位唯一标识(用于 diff) |
+| `lng` / `lat` | 是 | 经度 / 纬度 |
+| `alt` | 否 | 高度(米) |
+| `imageUrl` | 否 | 该点单独图片(URL或base64) |
+| `size` | 否 | 该点单独宽高[w,h] |
+| `scale` | 否 | 该点单独缩放 |
+| `moveMode` | 否 | 该点移动模式 'smooth'\|'teleport' |
+| `customData` | 否 | 业务自定义数据 |
+
+**DynamicIcon 参数:**
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `imageUrl` | string | '' | 默认图(URL或base64) |
+| `size` | [w,h] | [64,64] | 默认宽高(px) |
+| `scale` | number | 1.0 | 默认缩放 |
+| `defaultMoveMode` | string | 'smooth' | 平滑/瞬移 |
+| `smoothMoveDuration` | number | 0.5 | 平滑时长(秒) |
+| `maxVisibleDistance` | number | 1e8 | 最大可见距离(厘米) |
+| `declutter` | boolean | true | 屏幕重叠避让 |
+| `declutterMargin` | number | 10 | 重叠判定外扩(px) |
+| `data` | Array | [] | 初始点位数组 |
+| `visible` | boolean | true | 显隐 |
+
+> **注意**: 运行期【仅】`setPoints`(重设点位) 与 `setImages`(批量赋图) 触发更新；其余配置项(imageUrl/size/scale/defaultMoveMode/...)构造后再赋值只静默改值，其最新值会在下一次 setPoints / setImages 触发的更新中一并下发。
