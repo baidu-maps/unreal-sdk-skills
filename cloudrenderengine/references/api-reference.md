@@ -91,6 +91,7 @@ import {
     RoadPile,               // 动态路桩
     RoadDataManager,        // 高精动态数据
     PersonLine,             // 数字人轨迹线
+    UAVSwarm,               // 无人机集群(低空飞行)
 
     // 分析工具 (Analysis)
     Skyline,                // 天际线分析
@@ -1056,6 +1057,78 @@ personLine.resume();
 ```
 
 > **注意**：除 `state`（0 暂停 / 1 继续）外，其余参数均为只读，实例化后不可修改。`state` 初值由 `startPaused` 决定（`startPaused: true` → `state = 0`，否则为 1），不要在构造参数里直接传 `state`。
+
+## 无人机集群 (UAVSwarm)
+
+根据 json 数据动态创建一组无人机，沿路径飞行并绘制轨迹（箭头 / 虚线 / 管道），支持按 id 增删改、相机跟随与座舱内外视角切换、顶部信息标签。继承自 Object3D，入场下发 `Gis_AddCommonGISLayer`；运行期【仅】修改 `option`（由各方法内部设置）触发更新。全局配置仅构造时传入、构造后只读；单机字段覆盖全局默认。距离/长度/高度单位米，角度度，速度千米/小时，颜色每项 0~1。
+
+```javascript
+const swarm = new Engine.UAVSwarm({
+    speedKmh: 30,                   // 全局飞行速度(km/h), 默认30
+    finishMode: 'stop',             // 跑完行为: stop/pingpong/restart/destroy
+    trajectoryStyle: 'arrow',       // 轨迹样式: arrow/dashed/pipeline/none
+    lineColor: [0, 0.6, 1, 1],      // 轨迹颜色 [R,G,B(,A)], 0~1
+    lineWidth: 1.5,                 // 箭头/虚线线宽(米)
+    dropMeters: 8,                  // 轨迹在路径正下方的落差(米)
+    pipeRadius: 3,                  // 管道半径(米, trajectoryStyle='pipeline')
+    followDistance: 15,             // 三人称跟随距离(米, 2~300)
+    followPitch: -15,               // 三人称俯角(度, -85~-5)
+    cockpitOffset: [-0.22, -0.35, 1.475], // 座舱相机相对机身 [前,右,上](米)
+    data: [                         // 无人机数组, 下发为 jsondata
+        {
+            id: 1,                  // 必填: 无人机id(同时是轨迹id)
+            path: [113.3168, 23.5132, 175, 113.3180, 23.5146, 200, 113.3192, 23.5158, 190], // 必填: 扁平[lng,lat,alt,...], 长度为3倍数且≥2点
+            speedKmh: 40,           // 单机覆盖全局
+            lineColor: [1, 0.55, 0, 1],
+            finishMode: 'pingpong',
+            lineStyle: {tileSpacing: 4, scrollSpeed: 1.0},
+        },
+        {id: 2, path: [113.3162, 23.5156, 160, 113.3182, 23.5168, 185], trajectoryStyle: 'dashed'},
+        {id: 3, path: [113.3180, 23.5140, 180, 113.3200, 23.5150, 190], showTrajectory: false},
+    ],
+});
+engine.addToScene(swarm);
+```
+**运行期操作（各方法内部修改 `option`，下一帧以 `Gis_UpdateCommonGISLayer` 下发）:**
+
+```javascript
+swarm.updateList([...]);              // 全量替换, UE 按 id diff(新增/移除/更新); 传[]清空
+swarm.updateDrone(1, {speedKmh: 60}); // 只改1号机(id不存在则追加)
+swarm.followById(2);                  // 相机跟随2号机
+swarm.viewChange(true);               // true=座舱内(一人称), false=座舱外(三人称)
+swarm.unFollow();                     // 停止跟随
+swarm.showLabels([                    // 无人机顶部信息标签(widget)
+    {ids: [1, 3], type: 'warning', title: '低电量告警', content: '电量 18%\n预计 3 分钟后返航'},
+    {id: 2, type: 'error', title: '链路中断', content: '已失联 12 秒'},
+    {id: 4, type: 'info', title: '巡检中', content: 'B 区第 3 航段', size: [200, 70]},
+]);
+```
+**全局配置（构造时传入，构造后只读）:**
+| 参数 | 默认 | 说明 |
+|------|------|------|
+| `speedKmh` | 30 | 飞行速度(km/h) |
+| `finishMode` | 'stop' | stop 停终点 / pingpong 折返 / restart 回起点 / destroy 移除 |
+| `continueTolerance` | 2 | 路线更新容差(米)，当前位置离新路线≤该值则从当前位置继续，否则从起点 |
+| `showTrajectory` | true | 是否显示轨迹 |
+| `trajectoryStyle` | 'arrow' | arrow 箭头带 / dashed 虚线带 / pipeline 管道 / none 不生成 |
+| `lineColor` | [0,0.6,1,1] | 轨迹颜色 [R,G,B(,A)]，0~1 |
+| `lineWidth` | 1.5 | 箭头/虚线线宽(米) |
+| `dropMeters` | 8 | 轨迹在路径正下方落差(米)，0=画在路径上 |
+| `pipeRadius` | 3 | 管道半径(米) |
+| `lineStyle` | 见下 | 箭头/虚线造型，约束 headSlope+bodyThickness+edgeSoftness≤1 |
+| `followDistance` | 15 | 三人称跟随距离(米，2~300) |
+| `followPitch` | -15 | 三人称俯角(度，-85~-5) |
+| `cockpitOffset` | [-0.22,-0.35,1.475] | 座舱相机相对机身 [前,右,上](米)，须恰好3个数 |
+
+**lineStyle 子字段:** `tileSpacing`(单元间隔米,>0,默认5)、`scrollSpeed`(流动速度 单元/秒,默认0.5,正顺负逆)、`headSlope`(箭头尖锐度,默认0.3)、`bodyThickness`(箭头粗细占比,默认0.4)、`edgeSoftness`(边缘羽化,默认0.08)、`dashRatio`(虚线实线占比,默认0.5)、`emissiveIntensity`(自发光,默认1.0)
+
+**单机 data 字段:** 必填 `id`、`path`（扁平 [lng,lat,alt,...]，长度3倍数且≥2点）；可选覆盖 `speedKmh/finishMode/showTrajectory/trajectoryStyle/lineColor/lineWidth/dropMeters/pipeRadius/lineStyle`（相机字段写单机内无效）
+
+**标签(widget)全局配置:** `labelDuration`(秒,默认0=常显)、`labelSize`([宽,高]px,默认[240,90])、`labelOffset`(米,默认1)、`labelMaxDistance`(米,默认5000)、`labelDeclutter`(默认true)、`labelFade`(秒,默认0.2)、`labelTitleFontSize`(14)、`labelContentFontSize`(12)、`labelBackgroundOpacity`(0.6)、`labelBackgroundTint`(0.25)、`labelOutlineWidth`(2)、`labelCornerRadius`(6)、`labelTypeColors`(类型→描边色，内置 info/warning/error)
+
+**方法:** `updateList(list)` 全量替换(按id diff)、`updateDrone(id, props)` 改单机(不存在则追加)、`followById(id)` 跟随、`unFollow()` 停止跟随、`viewChange(isCockpit)` 视角切换、`showLabels(labels)` 顶部标签
+
+**标签 label 字段:** `id`/`ids`(必填其一，ids 多机共用)、`title`、`content`(支持 \n 换行)、`type`(info/warning/error 或自定义)、`color`(优先于 type)、`size`([宽,高])
 
 ## 关卡管理 (LevelManage)
 

@@ -755,3 +755,30 @@ engine.addEventListener('customResponse', (res) => {
 **方法:** `pause()` 暂停、`resume()` 继续。
 
 > **注意**：除 `state`（0 暂停 / 1 继续，**唯一可实例化后修改的属性**）外，其余参数均为只读。`state` 初值由 `startPaused` 决定（`startPaused: true` → 0，否则 1），不要在构造参数中直接传 `state`。`linePoints.length % 3 !== 0` 时构造会抛错。
+
+### UAVSwarm 无人机集群
+
+继承自 Object3D。根据 json 数据动态创建一组无人机，沿路径飞行并绘制轨迹（箭头 / 虚线 / 管道），支持按 id 增删改、相机跟随、座舱内外视角切换、顶部信息标签 widget。适合低空经济、无人机编队巡检等场景。
+
+**全局配置（构造时传入，构造后只读）:** `speedKmh`(30) `finishMode`(stop/pingpong/restart/destroy) `continueTolerance`(2米) `showTrajectory`(true) `trajectoryStyle`(arrow/dashed/pipeline/none) `lineColor`([0,0.6,1,1]) `lineWidth`(1.5米) `dropMeters`(8米) `pipeRadius`(3米) `lineStyle`(造型) `followDistance`(15米,2~300) `followPitch`(-15度,-85~-5) `cockpitOffset`([-0.22,-0.35,1.475]) 及 `label*` 系列标签样式
+
+```javascript
+const swarm = new UAVSwarm({
+    speedKmh: 30,
+    trajectoryStyle: 'arrow',
+    data: [
+        {id: 1, path: [113.3168, 23.5132, 175, 113.3180, 23.5146, 200], finishMode: 'pingpong'},
+        {id: 2, path: [113.3162, 23.5156, 160, 113.3182, 23.5168, 185], trajectoryStyle: 'dashed'},
+    ],
+});
+```
+**单机 data 字段:** 必填 `id`、`path`（扁平 [lng,lat,alt,...]，长度为 3 的倍数且 ≥2 点）；可选覆盖 `speedKmh/finishMode/showTrajectory/trajectoryStyle/lineColor/lineWidth/dropMeters/pipeRadius/lineStyle`（相机字段写单机内无效）。
+
+**关键方法:**
+- `updateList(list)`: 全量替换，UE 按 id diff（新增/移除/更新），传 `[]` 清空
+- `updateDrone(id, props)`: 只改指定机（id 不存在则追加）
+- `followById(id)` / `unFollow()`: 相机跟随 / 停止跟随
+- `viewChange(isCockpit)`: `true` 座舱内(一人称) / `false` 座舱外(三人称)
+- `showLabels(labels)`: 无人机顶部信息标签，`[{id|ids, title, content, type, color?, size?}]`
+
+> 运行期仅各方法内部修改的 `option` 触发更新；全局配置构造后只读。`finishMode`: stop 停终点 / pingpong 折返 / restart 回起点 / destroy 到终点移除。重复下发已有无人机时，位置离新路线 ≤ `continueTolerance` 则从当前位置续飞，否则从起点开始。

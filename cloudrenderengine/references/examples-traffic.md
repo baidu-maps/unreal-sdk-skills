@@ -419,3 +419,86 @@ function updateVehiclePosition(lng, lat, heading) {
     });
 }
 ```
+
+---
+
+## UAVSwarm 无人机集群（低空飞行）
+
+根据 json 数据动态创建一组无人机，沿路径飞行并绘制轨迹（箭头 / 虚线 / 管道），支持按 id 增删改、相机跟随、座舱内外视角切换、顶部信息标签。适合低空经济、无人机编队巡检、物流配送等场景。
+
+```javascript
+import { UAVSwarm } from 'mapv-cloudrenderengine';
+
+const swarm = new UAVSwarm({
+    speedKmh: 30,                   // 全局飞行速度(km/h)
+    finishMode: 'stop',             // 跑完行为: stop/pingpong/restart/destroy
+    trajectoryStyle: 'arrow',       // 轨迹样式: arrow/dashed/pipeline/none
+    lineColor: [0, 0.6, 1, 1],      // 轨迹颜色 [R,G,B,A], 0~1
+    lineWidth: 1.5,                 // 箭头/虚线线宽(米)
+    dropMeters: 8,                  // 轨迹在路径正下方的落差(米)
+    pipeRadius: 3,                  // 管道半径(米, 仅 pipeline 样式)
+    followDistance: 15,             // 三人称跟随距离(米, 2~300)
+    followPitch: -15,               // 三人称俯角(度, -85~-5)
+    cockpitOffset: [-0.22, -0.35, 1.475], // 座舱相机相对机身 [前,右,上](米)
+    data: [
+        {
+            id: 1,                  // 必填: 无人机id(同时是轨迹id)
+            // 必填: 扁平坐标 [经度,纬度,高度(米), ...], 长度为3的倍数且至少2个点
+            path: [113.3168, 23.5132, 175, 113.3180, 23.5146, 200, 113.3192, 23.5158, 190],
+            speedKmh: 40,           // 单机覆盖全局
+            lineColor: [1, 0.55, 0, 1],
+            finishMode: 'pingpong',
+            lineStyle: { tileSpacing: 4, scrollSpeed: 1.0 },
+        },
+        { id: 2, path: [113.3162, 23.5156, 160, 113.3182, 23.5168, 185], trajectoryStyle: 'dashed' },
+        { id: 3, path: [113.3180, 23.5140, 180, 113.3200, 23.5150, 190], showTrajectory: false },
+    ],
+});
+
+engine.addToScene(swarm);
+```
+**运行期操作（各方法内部修改 `option`，下一帧以 `Gis_UpdateCommonGISLayer` 下发）:**
+
+```javascript
+// 全量替换无人机列表, UE 按 id diff(新 id 新增 / 缺失的旧 id 移除 / 已有 id 更新)
+swarm.updateList([
+    { id: 1, path: [113.3168, 23.5132, 175, 113.3195, 23.5160, 195] },
+    { id: 4, path: [113.3150, 23.5120, 170, 113.3170, 23.5135, 185] },  // 新增一架
+]);
+// 只修改 1 号机参数(id 不存在则追加一架)
+swarm.updateDrone(1, { speedKmh: 60, lineColor: [1, 0, 0, 1] });
+
+// 相机跟随与视角切换
+swarm.followById(2);        // 相机跟随 2 号机
+swarm.viewChange(true);     // 进入座舱内(一人称)视角
+swarm.viewChange(false);    // 回到座舱外(三人称跟随)视角
+swarm.unFollow();           // 停止跟随
+
+// 无人机顶部信息标签(widget): type 决定描边色(info 蓝 / warning 黄 / error 红)
+swarm.showLabels([
+    { ids: [1, 3], type: 'warning', title: '低电量告警', content: '电量 18%\n预计 3 分钟后返航' },
+    { id: 2, type: 'error', title: '链路中断', content: '已失联 12 秒' },
+    { id: 4, type: 'info', title: '巡检中', content: 'B 区第 3 航段', size: [200, 70] },
+]);
+
+// 清空全部无人机
+swarm.updateList([]);
+```
+**全局配置（构造时传入，构造后只读）:**
+| 参数 | 默认 | 说明 |
+|------|------|------|
+| `speedKmh` | 30 | 飞行速度(km/h) |
+| `finishMode` | 'stop' | stop 停终点 / pingpong 折返 / restart 回起点 / destroy 移除 |
+| `continueTolerance` | 2 | 路线更新容差(米)，当前位置离新路线≤该值则续飞，否则从起点 |
+| `trajectoryStyle` | 'arrow' | arrow 箭头带 / dashed 虚线带 / pipeline 管道 / none |
+| `lineColor` | [0,0.6,1,1] | 轨迹颜色 [R,G,B(,A)]，0~1 |
+| `lineWidth` | 1.5 | 箭头/虚线线宽(米) |
+| `dropMeters` | 8 | 轨迹在路径正下方落差(米) |
+| `pipeRadius` | 3 | 管道半径(米) |
+| `followDistance` | 15 | 三人称跟随距离(米，2~300) |
+| `followPitch` | -15 | 三人称俯角(度，-85~-5) |
+| `cockpitOffset` | [-0.22,-0.35,1.475] | 座舱相机相对机身 [前,右,上](米) |
+
+> **lineStyle 子字段:** `tileSpacing`(单元间隔米,默认5)、`scrollSpeed`(流速单元/秒,默认0.5)、`headSlope`(箭头尖锐,0.3)、`bodyThickness`(0.4)、`edgeSoftness`(0.08)、`dashRatio`(0.5)、`emissiveIntensity`(1.0)；约束 `headSlope+bodyThickness+edgeSoftness≤1`。
+>
+> **标签 label 字段:** `id`/`ids`(必填其一)、`title`、`content`(支持 \n)、`type`(info/warning/error)、`color`(优先于 type)、`size`([宽,高])。标签样式由构造参数 `labelDuration/labelSize/labelOffset/labelMaxDistance/labelTypeColors` 等控制。
