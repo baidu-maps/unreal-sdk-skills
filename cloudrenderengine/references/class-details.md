@@ -219,6 +219,30 @@ new DynamicIcon({
 
 > 运行期仅 `setPoints` / `setImages` 触发更新；其余属性构造后赋值只静默改值，随下一次更新一并下发。每点位字段 {id,lng,lat,alt?,imageUrl?,size?,scale?,customData?,moveMode?}，id/lng/lat 必填。
 
+### MassiveImages 大规模图片点位
+
+继承自 Object3D。用一张共享图片批量渲染屏幕朝向的图标，支持重叠剔除(declutter)和鼠标事件，适合数千级同图标点位（UE 按 2000 以内设计）。所有点位共用同一张图与尺寸配置。
+
+**构造参数:** `image`(共享图 URL/base64) `size`([宽,高]px,默认[64,64]) `scale` `declutter`(重叠剔除) `declutterMargin` `declutterHz`(投影刷新频率) `maxVisibleDistance`(米) `data`([{id,lng,lat,alt?}]) `visible`
+
+```javascript
+new MassiveImages({
+    image: 'https://x/poi.png',
+    size: [48, 48],
+    maxVisibleDistance: 5000,
+    data: [
+        { id: 1, lng: 113.2644, lat: 23.1291, alt: 50 },
+        { id: 2, lng: 113.27, lat: 23.132 },
+    ],
+});
+```
+
+**关键方法:**
+- `updateList(list)`: 全量替换点位，已有 id 瞬移、缺失 id 删除、空数组清空
+- `updateImg(image)`: 更换所有点位共用的图片
+
+> 运行期仅 `updateList` / `updateImg` 触发更新；同一帧多次操作只下发最后一个 option，需跨帧分别更新列表和图片。重复 id 取最后一项，非法点位 UE 跳过。
+
 ## 线类详解
 
 ### Line 线条
@@ -782,3 +806,40 @@ const swarm = new UAVSwarm({
 - `showLabels(labels)`: 无人机顶部信息标签，`[{id|ids, title, content, type, color?, size?}]`
 
 > 运行期仅各方法内部修改的 `option` 触发更新；全局配置构造后只读。`finishMode`: stop 停终点 / pingpong 折返 / restart 回起点 / destroy 到终点移除。重复下发已有无人机时，位置离新路线 ≤ `continueTolerance` 则从当前位置续飞，否则从起点开始。
+
+### UAVGrid 民航无人机网格
+
+继承自 Object3D。按 MH/T 4063.1 在指定经纬度与高度范围内生成空域网格（单元 ID 为「平面码-高度码」），支持全局外观、按单元 ID 着色、跟随视角动态生成与左键点击拾取。经纬度 CGCS2000(度)，高度大地高(米,-512~15872)，颜色 `{r,g,b,a}`(0~1，也可 `[r,g,b,a]` 数组)。
+
+**构造参数（`range`/`planeLevel`/`heightLevel` 必填）:** `range`{west,east,south,north,bottomHeight,topHeight}、`planeLevel`(整数1~16)、`heightLevel`(整数1~15)、`autoDegrade`(false)、`clickPick`(true)、`style`、`onCellClick`
+
+```javascript
+const grid = new UAVGrid({
+    range: {west: 113.2785, east: 113.3385, south: 23.5007, north: 23.5607, bottomHeight: 2, topHeight: 1064},
+    planeLevel: 9,
+    heightLevel: 8,
+    style: {lineColor: {r: 0, g: 1, b: 0.2, a: 0.7}, drawOnTop: true},
+    onCellClick: e => console.log(e.content.code),
+});
+```
+
+**关键方法:** `setGlobalStyle(style)` 全局外观、`setCellStyles(items, mode)` 按ID着色(merge/replace)、`clearCellStyles(ids?)` 清除着色、`createGrid(options)` 重建、`followTarget(options)`/`unFollow()` 跟随视角、`setLodBands(bands)` 跟随LOD表、`setClickPick(enabled)` 点击开关、`clearGrid()` 清空。
+
+> 运行期仅各方法内部修改的 `option` 触发更新；网格后台生成期间着色/外观命令被拒(Busy)。`onCellClick` 回调 `e.content`: `code`(单元ID)、`planeLevel`/`heightLevel`、`center`/`min`/`max`、`sizeMeters`。
+
+### MassUAV 海量实时无人机
+
+继承自 Object3D，type 为 `MassPoints`。海量实时无人机图层，适用于万级无人机集群的宏观态势展示与近景细节查看：远景约 1 万架圆点、近景最多 1000 架模型，WebSocket 实时数据流、按时间戳平滑播放、按类型配色缩放、选中高亮、点击拾取与断线重连。入场自动连接后端 ws。
+
+**构造参数:** `url`(ws地址) `capacity`(16384) `clock`('server'/'receive') `interpMode`('linear'/'catmullRom') `pixelSize`(远景圆点px) `selectedColor` `microDistanceM`(进近景距离) `maxMicroCount`(1000) `types`([{type,color,scale}]) 等
+
+```javascript
+const layer = new MassUAV({
+    url: 'ws://127.0.0.1:18765',
+    microDistanceM: 300,
+    maxMicroCount: 1000,
+    types: [],
+});
+```
+
+**关键方法:** `connect(url?)` 连接(不传用构造地址)、`disconnect()` 断开停重连、`select(ids)` 选中(替换集合,空数组清空)、`clearSelection()` 清空选中。点击拾取绑定 `mousedown` 获取 id。

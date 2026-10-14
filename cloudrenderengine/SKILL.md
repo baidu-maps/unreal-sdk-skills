@@ -1,7 +1,7 @@
 ---
 name: cloudrenderengine
-description: This skill should be used when the user asks to "use mapv-cloudrenderengine", "create 3D visualization", "add map markers", "render geographic data", "use cloud rendering engine", "create lines/polygons/points on map", "add particle effects", "control weather/time", "use camera navigation", "初始化云渲染引擎", "创建云渲染demo", "快速接入调度服务", "生成云渲染项目", "添加地图标注", "绘制轨迹线", "创建热力图", "设置天气效果", "相机飞行动画", "获取点击坐标", "clickLocation事件", "动态资产AssetLayer", "自动驾驶车辆", "大规模路况", "信号灯接入", "关卡切换", "WebRTC监控", "建筑生长动画", "情报板编辑", "楼宇拆解", "模型剖切", "模型爆炸", "模型拆卸组装", "L3精模控制", "模型高亮", "骨骼动画", "水面模拟", "目标环绕", "数字人轨迹", "特殊车流", "信控灯", "ModelSlice", "ExplodeControl", "L3ModelControl", "SkeletonAnimControl", "WaterSimulation", "OrbitAroundFocusPoint", "PersonLine", "WSTrafficLayer", "TJInfoLightLayer", "多边形拉伸体", "高性能多边形", "PolygonMesh", "调度服务多host", "调度服务高可用", "多host配置", "视频卡顿优化", "playoutDelayHint", "车流剔除边界", "PipeLine", "三维管线", "圆管管线", "DynamicIcon", "大规模动态图标点", "动态图片点", "UAVSwarm", "无人机集群", "无人机编队", "低空飞行", "无人机轨迹", "相机跟随", "座舱视角", "无人机信息标签", or needs guidance on CloudRenderEngine API, class inheritance, data formats, and best practices.
-version: 1.9.6
+description: This skill should be used when the user asks to "use mapv-cloudrenderengine", "create 3D visualization", "add map markers", "render geographic data", "use cloud rendering engine", "create lines/polygons/points on map", "add particle effects", "control weather/time", "use camera navigation", "初始化云渲染引擎", "创建云渲染demo", "快速接入调度服务", "生成云渲染项目", "添加地图标注", "绘制轨迹线", "创建热力图", "设置天气效果", "相机飞行动画", "获取点击坐标", "clickLocation事件", "动态资产AssetLayer", "自动驾驶车辆", "大规模路况", "信号灯接入", "关卡切换", "WebRTC监控", "建筑生长动画", "情报板编辑", "楼宇拆解", "模型剖切", "模型爆炸", "模型拆卸组装", "L3精模控制", "模型高亮", "骨骼动画", "水面模拟", "目标环绕", "数字人轨迹", "特殊车流", "信控灯", "ModelSlice", "ExplodeControl", "L3ModelControl", "SkeletonAnimControl", "WaterSimulation", "OrbitAroundFocusPoint", "PersonLine", "WSTrafficLayer", "TJInfoLightLayer", "多边形拉伸体", "高性能多边形", "PolygonMesh", "调度服务多host", "调度服务高可用", "多host配置", "视频卡顿优化", "playoutDelayHint", "车流剔除边界", "PipeLine", "三维管线", "圆管管线", "DynamicIcon", "大规模动态图标点", "动态图片点", "UAVSwarm", "无人机集群", "无人机编队", "低空飞行", "无人机轨迹", "相机跟随", "座舱视角", "无人机信息标签", "MassiveImages", "大规模图片", "海量图片", "UAVGrid", "无人机网格", "民航网格", "空域网格", "MassUAV", "海量无人机", "万级无人机", "低空态势", or needs guidance on CloudRenderEngine API, class inheritance, data formats, and best practices.
+version: 1.9.7
 ---
 
 # mapv-cloudrenderengine 开发指南
@@ -37,7 +37,7 @@ import * as Engine from 'mapv-cloudrenderengine';
 ### 类继承关系
 ```
 EventDispatcher → Object3D → Shape
-                           ├── Point, IconPoint, TextPoint, BasicLabel, ClusterPoint, DynamicIcon (大规模动态图标点)
+                           ├── Point, IconPoint, TextPoint, BasicLabel, ClusterPoint, DynamicIcon (大规模动态图标点), MassiveImages (大规模图片)
                            ├── Line, ODLine, PipeLine (三维管线/圆管)
                            ├── Polygon, PolygonMesh (高性能拉伸多边形)
                            ├── Cone, Cube, Cylinder, Sphere, Circle...
@@ -45,7 +45,9 @@ EventDispatcher → Object3D → Shape
                            ├── ModelSlice (模型剖切)
                            ├── PersonLine (数字人轨迹线)
                            ├── WSTrafficLayer, TJInfoLightLayer (WebSocket交通图层)
-                           └── UAVSwarm (无人机集群，低空飞行)
+                           ├── UAVSwarm (无人机集群，低空飞行)
+                           ├── UAVGrid (民航无人机网格)
+                           └── MassUAV (海量实时无人机，万级)
 
 单例控制器 (通过 engine.xxx 访问):
 ├── l3ModelControl (L3精模控制)
@@ -367,6 +369,7 @@ assetLayer.addEventListener('mousedown', (e) => {
 | ClusterPoint | 点聚合 | 聚合距离、样式 |
 | WebViewPoint | 场景空间渲染web元素 | url, width, height |
 | DynamicIcon | 大规模动态图标点 | imageUrl, size, scale, defaultMoveMode, declutter |
+| MassiveImages | 大规模图片点位(共享图,数千级) | image, size, declutter, maxVisibleDistance |
 | **线类** | | |
 | Line | 线条 | style(solid/dashed/arrow), width, speed |
 | ODLine | OD线 | 起终点样式 |
@@ -407,6 +410,8 @@ assetLayer.addEventListener('mousedown', (e) => {
 | AssetLayer | 动态资产 | url, header, body (**必须先调用 setupModelInfo**) |
 | I3DTileLayer | 3DTiles数据 | url |
 | UAVSwarm | 无人机集群(低空飞行) | data, trajectoryStyle, followById, viewChange, showLabels |
+| UAVGrid | 民航无人机网格(空域网格) | range, planeLevel, heightLevel, followTarget, setCellStyles |
+| MassUAV | 海量实时无人机(万级,WebSocket) | url, capacity, connect, select |
 | **分析工具** | | |
 | Skyline | 天际线分析 | color, lineWidth |
 | VisualField | 可视域分析 | position, distance, angle |
@@ -472,7 +477,7 @@ assetLayer.addEventListener('mousedown', (e) => {
 - **`references/examples-markers-line.md`** - 线条类
 - **`references/examples-markers-shape.md`** - 几何形状类
 - **`references/examples-polygon-effects.md`** - 多边形与特效
-- **`references/examples-traffic.md`** - 交通行业与无人机集群(UAVSwarm)
+- **`references/examples-traffic.md`** - 交通行业与低空无人机(UAVSwarm/UAVGrid/MassUAV)
 - **`references/examples-tools.md`** - 分析工具与模型
 
 ### 示例代码

@@ -525,3 +525,58 @@ layer.setImages([
 | `visible` | boolean | true | 显隐 |
 
 > **注意**: 运行期【仅】`setPoints`(重设点位) 与 `setImages`(批量赋图) 触发更新；其余配置项(imageUrl/size/scale/defaultMoveMode/...)构造后再赋值只静默改值，其最新值会在下一次 setPoints / setImages 触发的更新中一并下发。
+
+---
+
+## MassiveImages 大规模图片点位（共享图高性能渲染）
+
+用一张共享图片批量渲染屏幕朝向的图标，支持重叠剔除和鼠标事件，适合数千级同图标点位（UE 按 2000 以内设计）。与 `DynamicIcon` 不同：MassiveImages 所有点位共用同一张图，无单点图片/移动模式，更轻量；需要每点不同图或平滑移动请用 `DynamicIcon`。
+
+```javascript
+import { MassiveImages } from 'mapv-cloudrenderengine';
+
+const images = new MassiveImages({
+    image: 'https://example.com/poi.png', // 共享图(URL或base64), 所有点位共用
+    size: [48, 48],                 // 屏幕尺寸[宽,高]px(UE 当前按 size[0] 正方形)
+    scale: 1,                       // 尺寸倍率, 实际边长=size[0]×scale
+    declutter: true,                // 重叠剔除, 保留离相机最近点位
+    declutterMargin: 10,            // 重叠判定外扩(px, 可负)
+    declutterHz: 10,                // 屏幕投影刷新频率(次/秒, ≤0 每帧)
+    maxVisibleDistance: 5000,       // 最大可见距离(米, ≤0 不限)
+    data: [                         // 点位 {id,lng,lat,alt?}, 共用 image 与尺寸配置
+        { id: 1, lng: 113.2644, lat: 23.1291, alt: 50 },
+        { id: 2, lng: 113.27, lat: 23.132 },
+    ],
+});
+
+engine.addToScene(images);
+```
+**运行期更新:**
+
+```javascript
+// 全量替换点位: 已有 id 瞬移到新位置, 缺失的旧 id 删除, 空数组清空全部
+images.updateList([
+    { id: 1, lng: 113.28, lat: 23.14, alt: 60 },
+    { id: 3, lng: 113.29, lat: 23.15 },
+]);
+
+// 更换所有点位共用的图片(需在列表更新已下发后再调用, 避免同帧覆盖)
+images.updateImg('data:image/png;base64,...');
+
+images.visible = false; // 隐藏时不派发鼠标事件
+```
+
+**MassiveImages 参数:**
+| 参数 | 默认 | 说明 |
+|------|------|------|
+| `image` | '' | 共享图(URL或base64) |
+| `size` | [64,64] | 屏幕尺寸[宽,高]px(当前用 size[0] 正方形) |
+| `scale` | 1 | 尺寸倍率 |
+| `declutter` | true | 重叠剔除(保留最近) |
+| `declutterMargin` | 10 | 重叠判定外扩(px，可负) |
+| `declutterHz` | 10 | 投影刷新频率(次/秒，≤0每帧) |
+| `maxVisibleDistance` | 1e6 | 最大可见距离(米，≤0不限) |
+| `data` | [] | 点位 {id,lng,lat,alt?}，共用图与尺寸 |
+| `visible` | true | 显隐 |
+
+> **注意**: 运行期仅 `updateList`(换点位) 与 `updateImg`(换共享图) 触发更新；同一帧多次操作只下发最后一个 option，需跨帧分别更新列表和图片。点位重复 id 取最后一项，非法点位 UE 跳过。

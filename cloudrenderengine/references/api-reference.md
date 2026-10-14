@@ -31,6 +31,7 @@ import {
     WebViewPoint,           // Web视图点
     Light,                  // 光源
     DynamicIcon,            // 大规模动态图标点
+    MassiveImages,          // 大规模图片点位(共享图)
 
     // 线类 (Line)
     Line,                   // 线
@@ -92,6 +93,8 @@ import {
     RoadDataManager,        // 高精动态数据
     PersonLine,             // 数字人轨迹线
     UAVSwarm,               // 无人机集群(低空飞行)
+    UAVGrid,                // 民航无人机网格
+    MassUAV,                // 海量实时无人机(万级)
 
     // 分析工具 (Analysis)
     Skyline,                // 天际线分析
@@ -701,6 +704,47 @@ layer.setImages([{ image: 'https://x/dji.png', id: [1, 2] }]);
 
 **方法:** `setPoints(points)` 更新点位(按 id diff)、`setImages(images)` 批量赋图 `[{image, id:[...]}]`
 
+### MassiveImages 大规模图片点位
+
+用一张共享图片批量渲染屏幕朝向的图标，支持重叠剔除和鼠标事件，适合数千级同图标点位（UE 按 2000 以内设计）。继承自 Object3D，type 为 `InstancedIcon`。运行期仅 `updateList`（换点位）/`updateImg`（换共享图）触发更新；同一帧多次操作只下发最后一个，需跨帧分别更新列表和图片。
+
+```javascript
+const images = new Engine.MassiveImages({
+    image: 'https://example.com/poi.png', // 共享图(URL或base64), 所有点位共用
+    size: [48, 48],                 // 屏幕尺寸[宽,高]px, 默认[64,64](UE 当前按 size[0] 正方形)
+    scale: 1,                       // 尺寸倍率, 实际边长=size[0]×scale
+    declutter: true,                // 重叠剔除, 保留离相机最近点位
+    declutterMargin: 10,            // 重叠判定外扩(px, 可负)
+    declutterHz: 10,                // 屏幕投影刷新频率(次/秒, ≤0 每帧)
+    maxVisibleDistance: 5000,       // 最大可见距离(米, ≤0 不限)
+    data: [                         // 点位 {id,lng,lat,alt?}, 共用 image 与尺寸
+        { id: 1, lng: 113.2644, lat: 23.1291, alt: 50 },
+        { id: 2, lng: 113.27, lat: 23.132 },
+    ],
+});
+engine.addToScene(images);
+
+// 全量替换点位(已有 id 瞬移, 缺失 id 删除, 空数组清空)
+images.updateList([{ id: 1, lng: 113.28, lat: 23.14, alt: 60 }]);
+// 换共享图(需在列表更新已下发后再调用, 避免同帧覆盖)
+images.updateImg('data:image/png;base64,...');
+images.visible = false;
+```
+
+**MassiveImages 参数:**
+| 参数 | 默认 | 说明 |
+|------|------|------|
+| `image` | '' | 共享图(URL或base64) |
+| `size` | [64,64] | 屏幕尺寸[宽,高]px(当前用 size[0]) |
+| `scale` | 1 | 尺寸倍率 |
+| `declutter` | true | 重叠剔除 |
+| `declutterMargin` | 10 | 重叠外扩(px，可负) |
+| `declutterHz` | 10 | 投影刷新(次/秒，≤0每帧) |
+| `maxVisibleDistance` | 1e6 | 最大可见距离(米，≤0不限) |
+| `data` | [] | 点位 {id,lng,lat,alt?} |
+
+**方法:** `updateList(list)` 全量替换点位、`updateImg(image)` 更换共享图
+
 ### Polygon 多边形
 
 ```javascript
@@ -1129,6 +1173,85 @@ swarm.showLabels([                    // 无人机顶部信息标签(widget)
 **方法:** `updateList(list)` 全量替换(按id diff)、`updateDrone(id, props)` 改单机(不存在则追加)、`followById(id)` 跟随、`unFollow()` 停止跟随、`viewChange(isCockpit)` 视角切换、`showLabels(labels)` 顶部标签
 
 **标签 label 字段:** `id`/`ids`(必填其一，ids 多机共用)、`title`、`content`(支持 \n 换行)、`type`(info/warning/error 或自定义)、`color`(优先于 type)、`size`([宽,高])
+
+## 民航无人机网格 (UAVGrid)
+
+按 MH/T 4063.1 在指定经纬度与高度范围内生成空域网格（单元 ID 为「平面码-高度码」），支持全局外观、按单元 ID 着色、跟随视角动态生成与左键点击拾取。继承自 Object3D。经纬度为 CGCS2000(度)，高度为大地高(米，-512~15872)，颜色 `{r,g,b,a}`(0~1，也可传 `[r,g,b,a]` 数组由前端转换)。`range`/`planeLevel`/`heightLevel` 必填。运行期仅各方法内部修改的 `option` 触发更新；网格后台生成期间着色/外观命令会被拒绝(Busy)，需等生成完成。
+
+```javascript
+const grid = new Engine.UAVGrid({
+    range: { west: 113.278507, east: 113.338507, south: 23.500739, north: 23.560739, bottomHeight: 2, topHeight: 1064 },
+    planeLevel: 9,                  // 必填 整数1~16, 越大格子越小
+    heightLevel: 8,                 // 必填 整数1~15, 层厚=16384/2^heightLevel 米
+    autoDegrade: false,             // 超预算(50万顶点/256块)时自动调粗, 默认false(拒绝)
+    clickPick: true,                // 左键点击拾取, 默认true
+    style: {
+        lineColor: { r: 0, g: 1, b: 0.2, a: 0.7 },
+        cellFillColor: { r: 0.2, g: 0.9, b: 0.4, a: 0.15 },
+        drawOnTop: true,            // 穿透地形建筑始终可见
+    },
+    onCellClick: e => console.log('点中单元', e.content.code, e.content.center),
+});
+engine.addToScene(grid);
+```
+**运行期操作（各方法内部修改 `option`）:**
+
+```javascript
+grid.setGlobalStyle({ lineColor: { r: 0, g: 0.8, b: 1, a: 0.9 }, lineEmissive: 2.0 }); // 改全局外观
+grid.setCellStyles([                 // 按单元 ID 着色(mode 默认 'merge', 'replace' 先清空)
+    { ids: [code1, code2], lineColor: { r: 1, g: 0, b: 0, a: 1 }, fillColor: [1, 0, 0, 0.5] },
+]);
+grid.clearCellStyles([code1]);       // 清除指定 ID 着色(不传=全部)
+grid.createGrid({ planeLevel: 10 }); // 按新范围/级别重建(未传沿用当前值)
+grid.followTarget({ radiusMeters: 1500, heightBelow: 60, heightAbove: 120 }); // 跟随视角
+grid.setLodBands([                   // 只替换跟随的 LOD 表(高度→级别)
+    { minHeight: 0, maxHeight: 1000, planeLevel: 10, heightLevel: 9 },
+    { minHeight: 1000, maxHeight: 15872, planeLevel: 8, heightLevel: 8 },
+]);
+grid.unFollow();                     // 停止跟随
+grid.setClickPick(false);            // 开关点击拾取
+grid.clearGrid();                    // 清空网格(保留图层, 可 createGrid 重建)
+```
+
+**构造参数:** `range`{west,east,south,north,bottomHeight,topHeight}、`planeLevel`(1~16)、`heightLevel`(1~15)、`autoDegrade`(false)、`clickPick`(true)、`style`、`onCellClick`
+
+**style 字段:** `lineColor`(网格线色)、`cellFillColor`(格子面色，a=0 只剩线)、`highlightColor`/`highlightLineColor`(点中高亮)、`drawOnTop`(穿透遮挡，默认true)、`lineEmissive`(线亮度倍数，默认2.0)
+
+**方法:** `setGlobalStyle(style)`、`setCellStyles(items, mode)`、`clearCellStyles(ids?)`、`createGrid(options)`、`followTarget(options)`、`unFollow()`、`setLodBands(lodBands)`、`setClickPick(enabled)`、`clearGrid()`
+
+**onCellClick 回调** `e.content`: `code`(单元ID，可直接用于着色)、`planeLevel`/`heightLevel`、`center`/`min`/`max`({lon,lat,height})、`sizeMeters`({eastWest,northSouth,height})
+
+## 海量实时无人机 (MassUAV)
+
+海量实时无人机图层，适用于万级无人机集群的宏观态势展示与近景细节查看。远景约 1 万架圆点、近景最多 1000 架模型，支持 WebSocket 实时数据流、按时间戳平滑播放、线性/曲线插值、按类型配色缩放、选中高亮、视野裁剪、点击拾取与断线重连。继承自 Object3D，type 为 `MassPoints`。入场自动连接后端 ws 获取数据。
+
+```javascript
+const layer = new Engine.MassUAV({
+    url: 'ws://127.0.0.1:18765', // WebSocket 地址
+    capacity: 16384,             // 最大点数
+    clock: 'server',             // 播放时钟 'server'|'receive'
+    interpMode: 'linear',        // 插值 'linear'|'catmullRom'
+    pixelSize: 6,                // 远景圆点直径(px)
+    selectedColor: '#ffd400',    // 选中色
+    microDistanceM: 300,         // 进入近景的距离(米)
+    maxMicroCount: 1000,         // 近景模型数量上限
+    types: [],                   // type 外观配置 [{type,color,scale}]
+});
+engine.addToScene(layer);        // 入场自动连接 ws
+
+// 运行期操作(下发 Gis_UpdateCommonGISLayer)
+layer.connect('ws://127.0.0.1:18766'); // 切换地址并连接(不传=用构造地址)
+layer.disconnect();                     // 断开并停止重连
+layer.select(['UAV-0001', 'UAV-0002']); // 选中(替换当前选中集, 空数组清空)
+layer.clearSelection();                 // 清空选中
+layer.addEventListener('mousedown', e => console.log(e.content)); // 点击拾取获取 id
+```
+
+**构造参数:** `url`、`capacity`(16384)、`clock`('server')、`interpMode`('linear')、`delayFactor`(linear 1.4/catmullRom 2.4)、`defaultAltM`(0)、`pixelSize`(6)、`defaultColor`、`selectedColor`('#ffd400')、`selectedScale`(1.6)、`microDistanceM`(进近景距离米)、`maxMicroCount`(1000)、`lodHz`(5)、`pickRadiusPx`(8)、`pickOcclusionTest`(true)、`selectOnClick`(true)、`reconnectIntervalSec`(3)、`types`([{type,color,scale}])
+
+**方法:** `connect(url?)` 连接、`disconnect()` 断开、`select(ids)` 选中、`clearSelection()` 清空选中；显隐用 `visible`，销毁用 `engine.destoryObject(layer)`
+
+
 
 ## 关卡管理 (LevelManage)
 

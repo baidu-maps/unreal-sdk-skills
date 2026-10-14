@@ -502,3 +502,108 @@ swarm.updateList([]);
 > **lineStyle 子字段:** `tileSpacing`(单元间隔米,默认5)、`scrollSpeed`(流速单元/秒,默认0.5)、`headSlope`(箭头尖锐,0.3)、`bodyThickness`(0.4)、`edgeSoftness`(0.08)、`dashRatio`(0.5)、`emissiveIntensity`(1.0)；约束 `headSlope+bodyThickness+edgeSoftness≤1`。
 >
 > **标签 label 字段:** `id`/`ids`(必填其一)、`title`、`content`(支持 \n)、`type`(info/warning/error)、`color`(优先于 type)、`size`([宽,高])。标签样式由构造参数 `labelDuration/labelSize/labelOffset/labelMaxDistance/labelTypeColors` 等控制。
+
+---
+
+## UAVGrid 民航无人机网格（空域网格）
+
+按 MH/T 4063.1 在指定经纬度与高度范围内生成空域网格，单元 ID 为「平面码-高度码」。支持全局外观、按单元 ID 着色、跟随视角动态生成与左键点击拾取。适合民航空域管理、无人机航路规划、低空网格化监管等场景。经纬度为 CGCS2000(度)，高度为大地高(米，-512~15872)。
+
+```javascript
+import { UAVGrid } from 'mapv-cloudrenderengine';
+
+const grid = new UAVGrid({
+    // 网格范围(必填), 实际会向外对齐到完整标准单元
+    range: {
+        west: 113.278507, east: 113.338507,
+        south: 23.500739, north: 23.560739,
+        bottomHeight: 2, topHeight: 1064,     // 大地高(米)
+    },
+    planeLevel: 9,                  // 必填: 平面级别 整数1~16, 越大格子越小
+    heightLevel: 8,                 // 必填: 高度级别 整数1~15, 层厚=16384/2^heightLevel 米
+    autoDegrade: false,             // 超预算(50万顶点/256块)时自动调粗平面级别
+    clickPick: true,                // 左键点击拾取
+    style: {
+        lineColor: { r: 0, g: 1, b: 0.2, a: 0.7 },          // 网格线色
+        cellFillColor: { r: 0.2, g: 0.9, b: 0.4, a: 0.15 }, // 格子面色(a=0 只剩线)
+        drawOnTop: true,            // 穿透地形和建筑始终可见
+    },
+    // 点中格子回调: code 可直接用于 setCellStyles / clearCellStyles
+    onCellClick: e => console.log('点中单元', e.content.code, e.content.center),
+});
+
+engine.addToScene(grid);
+```
+**运行期操作（各方法内部修改 `option`，网格后台生成期间命令会被拒绝 Busy，需等生成完成）:**
+
+```javascript
+// 修改全局外观(立即生效, 不重建网格)
+grid.setGlobalStyle({ lineColor: { r: 0, g: 0.8, b: 1, a: 0.9 }, lineEmissive: 2.0 });
+
+// 按单元 ID 着色(mode: 'merge' 默认增量 / 'replace' 先清空)
+grid.setCellStyles([
+    { ids: [code1, code2], lineColor: { r: 1, g: 0, b: 0, a: 1 }, fillColor: [1, 0, 0, 0.5] },
+]);
+grid.clearCellStyles([code1]);   // 清除指定 ID 着色(不传=全部)
+
+// 按新范围/级别重建(未传的 range/级别沿用当前值)
+grid.createGrid({ planeLevel: 10 });
+
+// 跟随视角: 以相机为中心生成窗口网格, 按高度从 lodBands 选级别
+grid.followTarget({
+    radiusMeters: 1500, heightBelow: 60, heightAbove: 120,
+    lodBands: [
+        { minHeight: 0, maxHeight: 1000, planeLevel: 11, heightLevel: 10 },
+        { minHeight: 1000, maxHeight: 15872, planeLevel: 8, heightLevel: 8 },
+    ],
+});
+grid.setLodBands([{ minHeight: -512, maxHeight: 15872, planeLevel: 8, heightLevel: 8 }]); // 只换 LOD 表
+grid.unFollow();                 // 停止跟随(停在最后窗口)
+grid.setClickPick(false);        // 关闭点击拾取
+grid.clearGrid();                // 清空网格(保留图层, 可 createGrid 重建)
+```
+
+> **style 字段:** `lineColor`、`cellFillColor`(a=0 只剩线)、`highlightColor`/`highlightLineColor`(点中高亮)、`drawOnTop`(穿透遮挡,默认true)、`lineEmissive`(线亮度,默认2.0)。颜色支持 `{r,g,b,a}` 或 `[r,g,b,a]`(0~1)。
+>
+> **onCellClick 回调** `e.content`: `code`(单元ID)、`planeLevel`/`heightLevel`、`center`/`min`/`max`({lon,lat,height})、`sizeMeters`({eastWest,northSouth,height})。
+>
+> **约束:** `planeLevel`/`heightLevel` 不能带小数；UE 严格校验，出现未知字段整条命令被拒。`setCellStyles` 单条最多 256 组、合计 20000 个 ID。
+
+## MassUAV 海量实时无人机（万级实时态势）
+
+海量实时无人机图层，适用于万级无人机集群的宏观态势展示与近景细节查看：远景约 1 万架圆点、近景最多 1000 架模型，支持 WebSocket 实时数据流、按时间戳平滑播放、线性/曲线插值、按类型配色缩放、选中高亮、视野裁剪、点击拾取与断线重连。适合空中交通监控、无人机编队、应急调度、城市低空态势。
+
+```javascript
+import { MassUAV } from 'mapv-cloudrenderengine';
+
+const layer = new MassUAV({
+    url: 'ws://127.0.0.1:18765', // WebSocket 地址, 入场后自动连接
+    capacity: 16384,             // 最大点数
+    clock: 'server',             // 播放时钟 'server'(服务器时间) | 'receive'(接收时间)
+    interpMode: 'linear',        // 插值 'linear' | 'catmullRom'(曲线)
+    pixelSize: 6,                // 远景圆点直径(px)
+    selectedColor: '#ffd400',    // 选中色
+    selectedScale: 1.6,          // 选中点放大倍数
+    microDistanceM: 300,         // 进入近景(模型呈现)的距离(米)
+    maxMicroCount: 1000,         // 近景模型数量上限
+    types: [                     // 按 type 配色与缩放
+        // { type: 'patrol', color: '#00ff88', scale: 1.2 },
+    ],
+});
+
+engine.addToScene(layer); // 入场自动连接后端 ws 获取数据
+```
+
+**运行期操作:**
+
+```javascript
+layer.connect('ws://127.0.0.1:18766'); // 切换地址并连接(不传=用构造/上次地址)
+layer.disconnect();                      // 断开并停止自动重连, 点位停在最后位置
+layer.select(['UAV-0001', 'UAV-0002']);  // 选中(替换当前选中集, 空数组清空)
+layer.clearSelection();                  // 清空选中
+layer.addEventListener('mousedown', e => console.log('点中', e.content)); // 点击拾取获取 id
+layer.visible = false;                   // 显隐
+engine.destoryObject(layer);             // 销毁
+```
+
+> **关键参数:** `delayFactor`(显示延迟系数, linear 1.4 / catmullRom 2.4)、`defaultColor`(未配置 type 的统一色)、`lodHz`(近景筛选频率5)、`pickRadiusPx`(拾取半径8)、`pickOcclusionTest`(遮挡检测true)、`selectOnClick`(点击即单选true)、`reconnectIntervalSec`(重连间隔3秒)、`rebaseDistanceM`(近景原点跟随阈值20000)。
