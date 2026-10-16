@@ -601,9 +601,12 @@ layer.connect('ws://127.0.0.1:18766'); // 切换地址并连接(不传=用构造
 layer.disconnect();                      // 断开并停止自动重连, 点位停在最后位置
 layer.select(['UAV-0001', 'UAV-0002']);  // 选中(替换当前选中集, 空数组清空)
 layer.clearSelection();                  // 清空选中
+layer.follow('UAV-0001');                // 第三人称跟随(相机在目标后方, 右键环绕/滚轮缩放)
+layer.follow('UAV-0001', { followDistanceM: 30, followPitchDeg: -25 }); // 跟随距离/俯角(覆盖构造值并记住)
+layer.stopFollow();                      // 停止跟随, 相机回到自由状态
 layer.addEventListener('mousedown', e => console.log('点中', e.content)); // 点击拾取获取 id
 layer.visible = false;                   // 显隐
 engine.destoryObject(layer);             // 销毁
 ```
 
-> **关键参数:** `delayFactor`(显示延迟系数, linear 1.4 / catmullRom 2.4)、`defaultColor`(未配置 type 的统一色)、`lodHz`(近景筛选频率5)、`pickRadiusPx`(拾取半径8)、`pickOcclusionTest`(遮挡检测true)、`selectOnClick`(点击即单选true)、`reconnectIntervalSec`(重连间隔3秒)、`rebaseDistanceM`(近景原点跟随阈值20000)。
+> **关键参数:** `delayFactor`(显示延迟系数, linear 1.4 / catmullRom 2.4)、`defaultColor`(未配置 type 的统一色)、`lodHz`(近景筛选频率5)、`pickRadiusPx`(拾取半径8)、`pickOcclusionTest`(遮挡检测true)、`selectOnClick`(点击即单选true)、`reconnectIntervalSec`(重连间隔3秒)、`rebaseDistanceM`(近景原点跟随阈值20000)、`followDistanceM`(跟随距离15米)、`followPitchDeg`(跟随俯角-15度)、`followLostSec`(目标消失自动停3秒)。

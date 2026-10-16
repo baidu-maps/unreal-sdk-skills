@@ -563,6 +563,11 @@ images.updateList([
 // 更换所有点位共用的图片(需在列表更新已下发后再调用, 避免同帧覆盖)
 images.updateImg('data:image/png;base64,...');
 
+// 点聚合: 开启后替代重叠剔除, 按远近分簇, 簇内 >1 在代表点下方显示数量(样式仅构造时传入)
+images.setCluster(true);
+// 深度测试: true 图标会被建筑/地形遮挡, false(默认)始终画在最前
+images.setDepthTest(true);
+
 images.visible = false; // 隐藏时不派发鼠标事件
 ```
 
@@ -577,6 +582,8 @@ images.visible = false; // 隐藏时不派发鼠标事件
 | `declutterHz` | 10 | 投影刷新频率(次/秒，≤0每帧) |
 | `maxVisibleDistance` | 1e6 | 最大可见距离(米，≤0不限) |
 | `data` | [] | 点位 {id,lng,lat,alt?}，共用图与尺寸 |
+| `cluster` | false | 点聚合开关(开启后替代 declutter) |
+| `depthTest` | false | 深度测试(false 始终最前；true 被模型遮挡) |
 | `visible` | true | 显隐 |
 
-> **注意**: 运行期仅 `updateList`(换点位) 与 `updateImg`(换共享图) 触发更新；同一帧多次操作只下发最后一个 option，需跨帧分别更新列表和图片。点位重复 id 取最后一项，非法点位 UE 跳过。
+> **注意**: 运行期仅 `updateList`(换点位)、`updateImg`(换共享图)、`setCluster`(开关聚合)、`setDepthTest`(开关遮挡) 触发更新；同一帧多次操作只下发最后一个 option，需跨帧分别更新。点位重复 id 取最后一项，非法点位 UE 跳过。点聚合样式 `cluster*`(clusterRadius/clusterFontSize/clusterTextColor/clusterOutlineColor/clusterOutlineSize/clusterLabelOffsetY/clusterMaxLabels) 仅构造时传入、构造后只读。

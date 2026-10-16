@@ -742,8 +742,12 @@ images.visible = false;
 | `declutterHz` | 10 | 投影刷新(次/秒，≤0每帧) |
 | `maxVisibleDistance` | 1e6 | 最大可见距离(米，≤0不限) |
 | `data` | [] | 点位 {id,lng,lat,alt?} |
+| `cluster` | false | 点聚合开关(开启后替代 declutter)；运行期用 setCluster 切换 |
+| `depthTest` | false | 深度测试(false 始终最前；true 被模型遮挡)；运行期用 setDepthTest 切换 |
 
-**方法:** `updateList(list)` 全量替换点位、`updateImg(image)` 更换共享图
+> **点聚合样式（`cluster*`，仅构造时传入、构造后只读）:** `clusterRadius`(60px)、`clusterFontSize`(14)、`clusterTextColor`('#FFFFFF')、`clusterOutlineColor`('#000000')、`clusterOutlineSize`(1)、`clusterLabelOffsetY`(2px)、`clusterMaxLabels`(300)。聚合按离相机远近划分簇，每簇显示代表点图标，簇内 >1 时在代表点下方显示数量，鼠标事件返回代表点 id。
+
+**方法:** `updateList(list)` 全量替换点位、`updateImg(image)` 更换共享图、`setCluster(enabled)` 开关点聚合、`setDepthTest(enabled)` 开关深度测试
 
 ### Polygon 多边形
 
@@ -1247,9 +1251,9 @@ layer.clearSelection();                 // 清空选中
 layer.addEventListener('mousedown', e => console.log(e.content)); // 点击拾取获取 id
 ```
 
-**构造参数:** `url`、`capacity`(16384)、`clock`('server')、`interpMode`('linear')、`delayFactor`(linear 1.4/catmullRom 2.4)、`defaultAltM`(0)、`pixelSize`(6)、`defaultColor`、`selectedColor`('#ffd400')、`selectedScale`(1.6)、`microDistanceM`(进近景距离米)、`maxMicroCount`(1000)、`lodHz`(5)、`pickRadiusPx`(8)、`pickOcclusionTest`(true)、`selectOnClick`(true)、`reconnectIntervalSec`(3)、`types`([{type,color,scale}])
+**构造参数:** `url`、`capacity`(16384)、`clock`('server')、`interpMode`('linear')、`delayFactor`(linear 1.4/catmullRom 2.4)、`defaultAltM`(0)、`pixelSize`(6)、`defaultColor`、`selectedColor`('#ffd400')、`selectedScale`(1.6)、`microDistanceM`(进近景距离米)、`maxMicroCount`(1000)、`lodHz`(5)、`pickRadiusPx`(8)、`pickOcclusionTest`(true)、`selectOnClick`(true)、`reconnectIntervalSec`(3)、`followDistanceM`(15)、`followPitchDeg`(-15)、`followLostSec`(3)、`types`([{type,color,scale}])
 
-**方法:** `connect(url?)` 连接、`disconnect()` 断开、`select(ids)` 选中、`clearSelection()` 清空选中；显隐用 `visible`，销毁用 `engine.destoryObject(layer)`
+**方法:** `connect(url?)` 连接、`disconnect()` 断开、`select(ids)` 选中、`clearSelection()` 清空选中、`follow(id, {followDistanceM?, followPitchDeg?})` 第三人称跟随(相机在目标后方，右键环绕/滚轮缩放；id 可提前下发；目标消失超 followLostSec 秒自动停)、`stopFollow()` 停止跟随；显隐用 `visible`，销毁用 `engine.destoryObject(layer)`
 
 
 

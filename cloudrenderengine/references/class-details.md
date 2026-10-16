@@ -240,8 +240,10 @@ new MassiveImages({
 **关键方法:**
 - `updateList(list)`: 全量替换点位，已有 id 瞬移、缺失 id 删除、空数组清空
 - `updateImg(image)`: 更换所有点位共用的图片
+- `setCluster(enabled)`: 开关点聚合（开启后替代 declutter，按远近分簇，簇内 >1 在代表点下方显示数量，鼠标事件返回代表点 id）
+- `setDepthTest(enabled)`: 开关深度测试（false 图标始终最前；true 被建筑/地形等模型遮挡）
 
-> 运行期仅 `updateList` / `updateImg` 触发更新；同一帧多次操作只下发最后一个 option，需跨帧分别更新列表和图片。重复 id 取最后一项，非法点位 UE 跳过。
+> 运行期仅 `updateList` / `updateImg` / `setCluster` / `setDepthTest` 触发更新；同一帧多次操作只下发最后一个 option，需跨帧分别更新。重复 id 取最后一项，非法点位 UE 跳过。点聚合样式 `cluster*`（clusterRadius/clusterFontSize/clusterTextColor/clusterOutlineColor/clusterOutlineSize/clusterLabelOffsetY/clusterMaxLabels）仅构造时传入、构造后只读。
 
 ## 线类详解
 
@@ -842,4 +844,4 @@ const layer = new MassUAV({
 });
 ```
 
-**关键方法:** `connect(url?)` 连接(不传用构造地址)、`disconnect()` 断开停重连、`select(ids)` 选中(替换集合,空数组清空)、`clearSelection()` 清空选中。点击拾取绑定 `mousedown` 获取 id。
+**关键方法:** `connect(url?)` 连接(不传用构造地址)、`disconnect()` 断开停重连、`select(ids)` 选中(替换集合,空数组清空)、`clearSelection()` 清空选中、`follow(id, {followDistanceM?, followPitchDeg?})` 第三人称跟随(相机在目标后方,右键环绕/滚轮缩放;id 可提前下发,目标消失超 followLostSec 秒自动停)、`stopFollow()` 停止跟随。点击拾取绑定 `mousedown` 获取 id。
