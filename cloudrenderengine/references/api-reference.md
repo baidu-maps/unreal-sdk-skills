@@ -543,7 +543,7 @@ new Line({
 
 ### PipeLine 三维管线 (圆管)
 
-沿一组三维坐标点生成圆管，支持分段着色、半径与径向分段数控制。入场下发 `Gis_AddCommonGISLayer`；运行期仅修改 `option` 或 `brightness` 触发更新，其余属性静默改值需配合下发。
+沿一组三维坐标点生成圆管，支持分段着色、半径与径向分段数控制。入场下发 `Gis_AddCommonGISLayer`；运行期仅修改 `option` 或 `emissiveIntensity` 触发更新，其余属性静默改值需配合下发。
 
 ```javascript
 const pipe = new Engine.PipeLine({
@@ -557,7 +557,7 @@ const pipe = new Engine.PipeLine({
         { r: 1, g: 0.1, b: 0.1, a: 0.3 },
     ],
     color: { r: 1, g: 0, b: 0, a: 0.5 },    // 基础颜色, 默认白色
-    brightness: 0.1,                        // 发光强度, 默认0
+    emissiveIntensity: 0.1,                 // 发光强度, 默认0
     radius: 10,                             // 半径(米), 默认1
     radialSegments: -1,                     // 径向分段数, -1 引擎自动
     pipeID: 0,                              // 管线ID(批量更新用)
@@ -572,7 +572,7 @@ pipe.setColorByIndex({ r: 1, g: 1, b: 0, a: 1 }, 0); // 按索引改单段
 pipe.addPipe([{ x: 113.320, y: 23.520, z: 120 }]);   // 追加管线
 pipe.removePipe(0);                                   // 移除指定管线
 pipe.clear();                                         // 清空
-pipe.brightness = 0.5;                                // 改亮度(触发更新, 复位 option)
+pipe.emissiveIntensity = 0.5;                         // 改发光强度(触发更新, 复位 option)
 ```
 **PipeLine 参数:**
 | 参数 | 类型 | 默认 | 说明 |
@@ -580,7 +580,7 @@ pipe.brightness = 0.5;                                // 改亮度(触发更新,
 | `pipeline` | Array<{x,y,z}> | [] | 路径点，x=经度 y=纬度 z=高度(米) |
 | `colors` | Array<{r,g,b,a}> | [] | 分段颜色(点数-1)，范围[0-1] |
 | `color` | {r,g,b,a} | 白 | 基础颜色 |
-| `brightness` | number | 0 | 发光强度(触发更新，复位 option) |
+| `emissiveIntensity` | number | 0 | 发光强度(触发更新，复位 option) |
 | `radius` | number | 1 | 半径(米) |
 | `radialSegments` | number | -1 | 径向分段数(-1 自动) |
 | `pipeID` | number | 0 | 管线ID(批量更新) |

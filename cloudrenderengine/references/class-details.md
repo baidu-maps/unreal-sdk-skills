@@ -340,7 +340,7 @@ new LargeRoadCondition({
 
 继承自 Object3D。沿一组三维坐标点生成圆管，支持分段着色、半径与径向分段数控制，适合管道、隧道、地下管网等三维线状可视化。
 
-**构造参数:** `pipeline`(路径点 {x:经度,y:纬度,z:高度米}) `colors`(分段颜色，(点数-1)段) `color`(基础色) `brightness` `radius`(半径米) `radialSegments`(径向分段，-1自动) `pipeID` `option` `visible`
+**构造参数:** `pipeline`(路径点 {x:经度,y:纬度,z:高度米}) `colors`(分段颜色，(点数-1)段) `color`(基础色) `emissiveIntensity`(发光强度) `radius`(半径米) `radialSegments`(径向分段，-1自动) `pipeID` `option` `visible`
 
 ```javascript
 new PipeLine({
@@ -354,13 +354,13 @@ new PipeLine({
         { r: 1, g: 0.1, b: 0.1, a: 0.3 },
     ],
     radius: 10,
-    brightness: 0.1,
+    emissiveIntensity: 0.1,
 });
 ```
 
 **关键方法:** `setColors(colors, pipeID)` 批量分段着色、`setColorByIndex(color, pipeID)` 按索引改单段、`addPipe(pipeline)` 追加管线、`removePipe(pipeID)` 移除、`clear()` 清空。
 
-> PipeID 由 UE 在管线创建完成后通过 `createFinished` 事件回传（`content.pipelineID`），也可前端自增维护。运行期仅修改 `option` / `brightness` 触发更新，其余属性静默改值需配合下发。
+> PipeID 由 UE 在管线创建完成后通过 `createFinished` 事件回传（`content.pipelineID`），也可前端自增维护。运行期仅修改 `option` / `emissiveIntensity` 触发更新，其余属性静默改值需配合下发。
 
 ## 面类详解
 

@@ -422,7 +422,7 @@ const pipe = new PipeLine({
         { r: 0, g: 1, b: 1, a: 0.3 },
     ],
     color: { r: 1, g: 0, b: 0, a: 0.5 },    // 基础颜色, 默认白色
-    brightness: 0.1,                        // 发光强度, 默认0
+    emissiveIntensity: 0.1,                 // 发光强度, 默认0
     radius: 10,                             // 半径(米), 默认1
     radialSegments: -1,                     // 径向分段数, -1 引擎自动
 });
@@ -458,7 +458,7 @@ pipe.removePipe(0);
 pipe.clear();
 
 // 修改发光强度(会触发更新, 并把 option 复位为空字符串)
-pipe.brightness = 0.5;
+pipe.emissiveIntensity = 0.5;
 ```
 
 **PipeLine 参数:**
@@ -467,11 +467,11 @@ pipe.brightness = 0.5;
 | `pipeline` | Array<{x,y,z}> | [] | 路径点，x=经度 y=纬度 z=高度(米) |
 | `colors` | Array<{r,g,b,a}> | [] | 分段颜色，通常(点数-1)段，范围[0-1] |
 | `color` | {r,g,b,a} | 白色 | 基础颜色，范围[0-1] |
-| `brightness` | number | 0 | 发光强度（修改触发更新，并复位 option） |
+| `emissiveIntensity` | number | 0 | 发光强度（修改触发更新，并复位 option） |
 | `radius` | number | 1 | 管线半径(米) |
 | `radialSegments` | number | -1 | 径向分段数(-1 引擎自动决定) |
 | `pipeID` | number | 0 | 管线ID，用于按管线批量更新 |
 | `option` | string | '' | 更新操作: clear/removePipe/setColors/setColorByIndex/addPipe |
 | `visible` | boolean | true | 显隐 |
 
-> **注意**: `colors` / `pipeline` / `color` / `radius` / `radialSegments` / `pipeID` 为静默属性，直接赋值只改值不触发更新，需配合 `option` 或 `brightness` 的修改一并下发。PipeID 也可由前端自增维护(0,1,2,…)。
+> **注意**: `colors` / `pipeline` / `color` / `radius` / `radialSegments` / `pipeID` 为静默属性，直接赋值只改值不触发更新，需配合 `option` 或 `emissiveIntensity` 的修改一并下发。PipeID 也可由前端自增维护(0,1,2,…)。
