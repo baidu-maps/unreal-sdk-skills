@@ -150,12 +150,20 @@ new CloudRenderEngine({
     matchViewportResolution: boolean, // 自适应分辨率 (默认false)
     connectOnLoad: boolean,        // 自动连接 (默认true)
     isReconnection: boolean,       // 开启重连 (默认false)
-    forceTURN: boolean,            // 使用TURN服务器 (默认false)
+    forceTURN: boolean,            // 使用TURN服务器 (默认false, 调度模式下会被调度服务回传值覆盖)
+    transportPolicy: string,       // 'auto' 不走TURN | 'relay' 强制TURN | 不传=旧逻辑(按 forceTURN/调度回传)
     resolution: [number, number],  // 分辨率 [宽,高]
     printStats: boolean,           // 打印状态信息
     UDSParams: object,             // 天气系统默认参数
     isSequencer: boolean,          // 离线渲染场景 (默认false)
     playoutDelayHint: number,      // 视频播放缓冲提示(秒), 默认0=零缓冲最低延迟
+    enableV2: boolean,             // V2 协议栈(分片+贴图去重+Ack/NACK+列存), 需 UE 端配套部署, 默认false
+
+    // 调度任务就绪等待 (3.0.2-beta1+, 仅调度模式生效, 直接指定 wsUrl 时不查询)
+    waitForStreamer: boolean,      // 创建任务后等 UE 就绪再连接, 默认true; false=原连接时机
+    streamerReadyTimeoutMs: number,      // 单轮等待/连续重连上限(ms), 默认90000, 范围1000~300000
+    streamerReadyPollIntervalMs: number, // 就绪查询间隔(ms), 默认1500, 范围1000~10000
+    connectionDebug: boolean,      // 输出连接阶段调试日志(不含token/凭据), 默认false
 })
 ```
 
@@ -474,6 +482,53 @@ engine.addEventListener('signalingServerError', () => {
     console.error('信令服务器连接错误');
 });
 ```
+
+### 任务就绪等待与连接诊断 (3.0.2-beta1+)
+
+调度模式下，SDK 创建任务后先轮询执行节点 `GET http://<task.host>:<task.apiPort>/api/tasks/<task.id>/readiness`，UE 就绪(`ready`)后才连接信令 WebSocket，避免 UE 未启动完成时连接失败。执行节点需允许浏览器访问其 API 端口并开启 CORS；老节点无该接口时自动回退为原连接时机。
+
+| readiness 结果 | SDK 行为 |
+|------|------|
+| `starting` | 继续等待(串行查询, 不重叠) |
+| `ready` | 连接信令 WebSocket |
+| `ended` | 停止等待, 不连接、不重建任务 |
+| HTTP 401/403 | 报认证错误 |
+| 404/405/501 或任务无 `apiPort` | 旧服务兼容模式, 按原时机连接 |
+| 网络异常/429/5xx | 本轮期限内继续查询, 超时暂停 |
+
+超时后页面弹层提示"点击继续等待"，复用原任务 ID 与 token 继续查询，**不会创建第二个任务**。
+
+```javascript
+// 观察连接阶段 (诊断字段不含 token/Authorization/完整 URL)
+engine.addEventListener('connectionStage', (e) => {
+    // e.stage / e.taskId / e.project / e.elapsedMs / e.retryCount / e.code
+    console.log(e.stage, e.taskId, e.elapsedMs);
+});
+
+// 读取当前连接状态快照
+const status = engine.getConnectionStatus();
+
+// 超时后由业务代码继续等待(同样复用原任务)
+engine.connect(onSuccess, onError);
+
+// 取消在途的就绪查询和已排队的重连(不结束 UE 任务)
+engine.cancelConnectionWait();
+
+// 销毁引擎: 取消查询、释放 WebRTC 连接和资源, 迟到回调不会再打开新连接
+engine.dispose();
+```
+
+**主要阶段 (`stage`):** `allocating` → `waitingForUE` → `ueReady` / `legacyFallback` → `connecting` → `websocketOpen` → `signalingReady` → `dataChannelReady` → `videoReady`；异常分支 `reconnecting`、`waitingStopped`、`capacityFull`、`rejected`、`ended`、`connectionFailed`。
+
+**WebSocket 关闭码与重试:**
+- `1013 / Streamer is not connected`：UE 仍在启动，按约 1.5、2.55、4.34、5 秒退避自动重试
+- `1013 / too many connections`：停止自动重试，需关闭多余播放器后手动继续
+- `1008`：凭据或访问策略拒绝，停止重试；同一引擎实例不能手动绕过，应获取新任务并新建实例
+- 其他中断：在 `streamerReadyTimeoutMs` 预算内重连原任务，超时转手动继续；观察到首帧后重置预算
+
+> **兼容说明**：`connected` 事件仍表示 WebSocket 握手完成，`connect` 的成功回调也不保证首帧已到达；需要画面就绪请继续监听 `videoInitialised`（或 `connectionStage` 的 `videoReady`）。
+
+**数据通道诊断:** `engine.getTransportStats()` 返回发送队列状态 `{tasks, bytes, closed, ackWaiters, retransmitBytes, textureBytes}`；数据通道发送失败时 engine 派发 `transportError` 事件（`e.code`，如 `DISCONNECTED` / `CANCELLED` / `SEND_FAILED`）。断线时排队中的消息会被取消，重连后需由业务重新下发。
 
 ## 天气时间系统 (UDS)
 
@@ -1728,6 +1783,9 @@ engine.addToScene(layerBuilding);
 // 引擎级别事件 (engine 上)
 'videoInitialised'      // 画面加载完成 (WebRTC画面就绪)
 'signalingServerError'  // 信令服务器错误 (SDK内部事件)
+'connected'             // 信令 WebSocket 握手完成 (不代表首帧)
+'connectionStage'       // 连接阶段变化 (stage/taskId/elapsedMs/retryCount/code)
+'transportError'        // 数据通道发送失败 (code)
 'addToScene'            // 对象创建完成回调
 'navigationStart'       // 巡游开始
 'navigationFinish'      // 巡游完成

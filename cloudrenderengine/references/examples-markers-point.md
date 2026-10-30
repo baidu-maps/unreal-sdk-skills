@@ -525,6 +525,8 @@ layer.setImages([
 | `visible` | boolean | true | 显隐 |
 
 > **注意**: 运行期【仅】`setPoints`(重设点位) 与 `setImages`(批量赋图) 触发更新；其余配置项(imageUrl/size/scale/defaultMoveMode/...)构造后再赋值只静默改值，其最新值会在下一次 setPoints / setImages 触发的更新中一并下发。
+>
+> **大图优化**: 引擎开启 `enableV2: true` 时，重复下发的大 base64 图片(默认图/点位图/setImages)会经 TextureBus 上传一次后以 `cre-tex:` 引用下发，避免每次 setPoints 重发同一张图；URL、小图或未开启 enableV2 时原样下发。入场报文始终内联图片。
 
 ---
 

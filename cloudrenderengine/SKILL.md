@@ -1,7 +1,7 @@
 ---
 name: cloudrenderengine
-description: This skill should be used when the user asks to "use mapv-cloudrenderengine", "create 3D visualization", "add map markers", "render geographic data", "use cloud rendering engine", "create lines/polygons/points on map", "add particle effects", "control weather/time", "use camera navigation", "初始化云渲染引擎", "创建云渲染demo", "快速接入调度服务", "生成云渲染项目", "添加地图标注", "绘制轨迹线", "创建热力图", "设置天气效果", "相机飞行动画", "获取点击坐标", "clickLocation事件", "动态资产AssetLayer", "自动驾驶车辆", "大规模路况", "信号灯接入", "关卡切换", "WebRTC监控", "建筑生长动画", "情报板编辑", "楼宇拆解", "模型剖切", "模型爆炸", "模型拆卸组装", "L3精模控制", "模型高亮", "骨骼动画", "水面模拟", "目标环绕", "数字人轨迹", "特殊车流", "信控灯", "ModelSlice", "ExplodeControl", "L3ModelControl", "SkeletonAnimControl", "WaterSimulation", "OrbitAroundFocusPoint", "PersonLine", "WSTrafficLayer", "TJInfoLightLayer", "多边形拉伸体", "高性能多边形", "PolygonMesh", "调度服务多host", "调度服务高可用", "多host配置", "视频卡顿优化", "playoutDelayHint", "车流剔除边界", "PipeLine", "三维管线", "圆管管线", "DynamicIcon", "大规模动态图标点", "动态图片点", "UAVSwarm", "无人机集群", "无人机编队", "低空飞行", "无人机轨迹", "相机跟随", "座舱视角", "无人机信息标签", "MassiveImages", "大规模图片", "海量图片", "UAVGrid", "无人机网格", "民航网格", "空域网格", "MassUAV", "海量无人机", "万级无人机", "低空态势", "点聚合", "深度检测", "无人机视野跟随", or needs guidance on CloudRenderEngine API, class inheritance, data formats, and best practices.
-version: 1.9.9
+description: This skill should be used when the user asks to "use mapv-cloudrenderengine", "create 3D visualization", "add map markers", "render geographic data", "use cloud rendering engine", "create lines/polygons/points on map", "add particle effects", "control weather/time", "use camera navigation", "初始化云渲染引擎", "创建云渲染demo", "快速接入调度服务", "生成云渲染项目", "添加地图标注", "绘制轨迹线", "创建热力图", "设置天气效果", "相机飞行动画", "获取点击坐标", "clickLocation事件", "动态资产AssetLayer", "自动驾驶车辆", "大规模路况", "信号灯接入", "关卡切换", "WebRTC监控", "建筑生长动画", "情报板编辑", "楼宇拆解", "模型剖切", "模型爆炸", "模型拆卸组装", "L3精模控制", "模型高亮", "骨骼动画", "水面模拟", "目标环绕", "数字人轨迹", "特殊车流", "信控灯", "ModelSlice", "ExplodeControl", "L3ModelControl", "SkeletonAnimControl", "WaterSimulation", "OrbitAroundFocusPoint", "PersonLine", "WSTrafficLayer", "TJInfoLightLayer", "多边形拉伸体", "高性能多边形", "PolygonMesh", "调度服务多host", "调度服务高可用", "多host配置", "视频卡顿优化", "playoutDelayHint", "车流剔除边界", "PipeLine", "三维管线", "圆管管线", "DynamicIcon", "大规模动态图标点", "动态图片点", "UAVSwarm", "无人机集群", "无人机编队", "低空飞行", "无人机轨迹", "相机跟随", "座舱视角", "无人机信息标签", "MassiveImages", "大规模图片", "海量图片", "UAVGrid", "无人机网格", "民航网格", "空域网格", "MassUAV", "海量无人机", "万级无人机", "低空态势", "点聚合", "深度检测", "无人机视野跟随", "等待UE就绪", "任务就绪", "连接诊断", "连接阶段", "connectionStage", "waitForStreamer", "cancelConnectionWait", "引擎销毁", "engine.dispose", "transportPolicy", or needs guidance on CloudRenderEngine API, class inheritance, data formats, and best practices.
+version: 2.0.0
 ---
 
 # mapv-cloudrenderengine 开发指南
@@ -446,6 +446,7 @@ assetLayer.addEventListener('mousedown', (e) => {
 4. **颜色格式** - 使用 0-1 范围的 RGB 值，如 `{r: 1, g: 0, b: 0}` 表示红色
 5. **WebRTC 监控** - 使用 `engine.onWebRtcConnectionStats()` 监控连接质量
 6. **AssetLayer 前置条件** - 使用 AssetLayer 前**必须**在 `videoInitialised` 事件中调用 `engine.setupModelInfo()` 配置模型信息，且仅执行一次。**不配置 setupModelInfo 将无法使用 AssetLayer！**
+7. **引擎销毁** - 页面/组件卸载时调用 `engine.dispose()`，取消在途的就绪查询并释放 WebRTC 连接，防止重复加载和迟到回调泄漏
 
 ## 常见问题
 
@@ -460,6 +461,8 @@ assetLayer.addEventListener('mousedown', (e) => {
 **静态大屏画面周期性微顿挫？** 网络指标正常但画面偶发抖动，通常是编码器大帧/关键帧突刺造成的到达抖动。创建引擎时设 `playoutDelayHint: 0.04`（30~50ms），用等量画面延迟换取平滑；默认 `0` 为零缓冲最低延迟。
 
 **调度服务单点故障？** `DispatchServer.host` 支持传数组或逗号分隔的多个地址，SDK 自动探活并跳过不可用节点（详见 `references/api-reference.md` 的"多 host 入口高可用"）。
+
+**UE 启动慢导致连接失败 / 一直转圈？** 3.0.2-beta1+ 默认 `waitForStreamer: true`，创建任务后先轮询执行节点 readiness，UE 就绪再连接；超时弹层"点击继续等待"会复用原任务。可调 `streamerReadyTimeoutMs`，开 `connectionDebug: true` 并监听 `connectionStage` 事件定位卡在哪个阶段（详见 `references/api-reference.md` 的"任务就绪等待与连接诊断"）。执行节点需放通 API 端口并开启 CORS。
 
 ## 参考文档
 
