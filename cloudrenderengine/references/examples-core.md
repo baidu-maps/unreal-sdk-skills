@@ -326,6 +326,18 @@ engine.enable3DTilesByName({
 | `TreeTiles` | 树木植被 |
 | `RoadTiles` | 道路 |
 
+> 上表是场景内置的 3DTiles。要在运行时加载、替换、显隐或移除**外部** 3DTiles（倾斜摄影、精模、管线等 tileset.json），用 `Dynamic3DTilesLayer`，详见 `api-reference.md` 的“Dynamic3DTilesLayer 动态3DTiles图层”。
+
+```javascript
+const tilesLayer = new Dynamic3DTilesLayer({
+    data: [{ name: 'building', url: 'https://example.com/building/tileset.json', heightOffset: 2 }],
+});
+engine.addToScene(tilesLayer);
+tilesLayer.addTilesets({ name: 'road', url: 'https://example.com/road/tileset.json' });
+tilesLayer.setTilesetsVisible(['building'], false);
+tilesLayer.removeTilesets(['road']);
+```
+
 ---
 
 ## 渲染质量控制

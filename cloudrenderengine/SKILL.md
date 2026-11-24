@@ -1,7 +1,7 @@
 ---
 name: cloudrenderengine
-description: This skill should be used when the user asks to "use mapv-cloudrenderengine", "create 3D visualization", "add map markers", "render geographic data", "use cloud rendering engine", "create lines/polygons/points on map", "add particle effects", "control weather/time", "use camera navigation", "初始化云渲染引擎", "创建云渲染demo", "快速接入调度服务", "生成云渲染项目", "添加地图标注", "绘制轨迹线", "创建热力图", "设置天气效果", "相机飞行动画", "获取点击坐标", "clickLocation事件", "动态资产AssetLayer", "自动驾驶车辆", "大规模路况", "信号灯接入", "关卡切换", "WebRTC监控", "建筑生长动画", "情报板编辑", "楼宇拆解", "模型剖切", "模型爆炸", "模型拆卸组装", "L3精模控制", "模型高亮", "骨骼动画", "水面模拟", "目标环绕", "数字人轨迹", "特殊车流", "信控灯", "ModelSlice", "ExplodeControl", "L3ModelControl", "SkeletonAnimControl", "WaterSimulation", "OrbitAroundFocusPoint", "PersonLine", "WSTrafficLayer", "TJInfoLightLayer", "多边形拉伸体", "高性能多边形", "PolygonMesh", "调度服务多host", "调度服务高可用", "多host配置", "视频卡顿优化", "playoutDelayHint", "车流剔除边界", "PipeLine", "三维管线", "圆管管线", "DynamicIcon", "大规模动态图标点", "动态图片点", "UAVSwarm", "无人机集群", "无人机编队", "低空飞行", "无人机轨迹", "相机跟随", "座舱视角", "无人机信息标签", "MassiveImages", "大规模图片", "海量图片", "UAVGrid", "无人机网格", "民航网格", "空域网格", "MassUAV", "海量无人机", "万级无人机", "低空态势", "点聚合", "深度检测", "无人机视野跟随", "等待UE就绪", "任务就绪", "连接诊断", "连接阶段", "connectionStage", "waitForStreamer", "cancelConnectionWait", "引擎销毁", "engine.dispose", "transportPolicy", or needs guidance on CloudRenderEngine API, class inheritance, data formats, and best practices.
-version: 2.0.0
+description: This skill should be used when the user asks to "use mapv-cloudrenderengine", "create 3D visualization", "add map markers", "render geographic data", "use cloud rendering engine", "create lines/polygons/points on map", "add particle effects", "control weather/time", "use camera navigation", "初始化云渲染引擎", "创建云渲染demo", "快速接入调度服务", "生成云渲染项目", "添加地图标注", "绘制轨迹线", "创建热力图", "设置天气效果", "相机飞行动画", "获取点击坐标", "clickLocation事件", "动态资产AssetLayer", "自动驾驶车辆", "大规模路况", "信号灯接入", "关卡切换", "WebRTC监控", "建筑生长动画", "情报板编辑", "楼宇拆解", "模型剖切", "模型爆炸", "模型拆卸组装", "L3精模控制", "模型高亮", "骨骼动画", "水面模拟", "目标环绕", "数字人轨迹", "特殊车流", "信控灯", "ModelSlice", "ExplodeControl", "L3ModelControl", "SkeletonAnimControl", "WaterSimulation", "OrbitAroundFocusPoint", "PersonLine", "WSTrafficLayer", "TJInfoLightLayer", "多边形拉伸体", "高性能多边形", "PolygonMesh", "调度服务多host", "调度服务高可用", "多host配置", "视频卡顿优化", "playoutDelayHint", "车流剔除边界", "PipeLine", "三维管线", "圆管管线", "DynamicIcon", "大规模动态图标点", "动态图片点", "UAVSwarm", "无人机集群", "无人机编队", "低空飞行", "无人机轨迹", "相机跟随", "座舱视角", "无人机信息标签", "MassiveImages", "大规模图片", "海量图片", "UAVGrid", "无人机网格", "民航网格", "空域网格", "MassUAV", "海量无人机", "万级无人机", "低空态势", "点聚合", "深度检测", "无人机视野跟随", "等待UE就绪", "任务就绪", "连接诊断", "连接阶段", "connectionStage", "waitForStreamer", "cancelConnectionWait", "引擎销毁", "engine.dispose", "transportPolicy", "PixelLine", "像素线", "固定像素宽度线", "行政区边界线", "Dynamic3DTilesLayer", "动态3DTiles", "3DTiles动态加载", "倾斜摄影加载", "DynamicLabel", "大规模动态标签", "自定义可移动标签", "pivot", "图标锚点", or needs guidance on CloudRenderEngine API, class inheritance, data formats, and best practices.
+version: 2.1.0
 ---
 
 # mapv-cloudrenderengine 开发指南
@@ -38,7 +38,8 @@ import * as Engine from 'mapv-cloudrenderengine';
 ```
 EventDispatcher → Object3D → Shape
                            ├── Point, IconPoint, TextPoint, BasicLabel, ClusterPoint, DynamicIcon (大规模动态图标点), MassiveImages (大规模图片)
-                           ├── Line, ODLine, PipeLine (三维管线/圆管)
+                           │     └── DynamicIcon → DynamicLabel (大规模动态标签)
+                           ├── Line, ODLine, PipeLine (三维管线/圆管), PixelLine (像素线)
                            ├── Polygon, PolygonMesh (高性能拉伸多边形)
                            ├── Cone, Cube, Cylinder, Sphere, Circle...
                            ├── Particle, Radar, Ripple, Decal, Heatmap...
@@ -46,6 +47,7 @@ EventDispatcher → Object3D → Shape
                            ├── PersonLine (数字人轨迹线)
                            ├── WSTrafficLayer, TJInfoLightLayer (WebSocket交通图层)
                            ├── UAVSwarm (无人机集群，低空飞行)
+                           ├── Dynamic3DTilesLayer (动态3DTiles图层)
                            ├── UAVGrid (民航无人机网格)
                            └── MassUAV (海量实时无人机，万级)
 
@@ -368,12 +370,14 @@ assetLayer.addEventListener('mousedown', (e) => {
 | BasicLabel | 自定义标签 | texture, width, height |
 | ClusterPoint | 点聚合 | 聚合距离、样式 |
 | WebViewPoint | 场景空间渲染web元素 | url, width, height |
-| DynamicIcon | 大规模动态图标点 | imageUrl, size, scale, defaultMoveMode, declutter |
-| MassiveImages | 大规模图片点位(共享图,数千级) | image, size, declutter, cluster, depthTest |
+| DynamicIcon | 大规模动态图标点 | imageUrl, size, scale, pivot, defaultMoveMode, declutter |
+| MassiveImages | 大规模图片点位(共享图,数千级) | image, size, pivot, declutter, cluster, depthTest |
+| DynamicLabel | 大规模动态标签(canvas 自定义, 可移动) | data(style/content), pivot, pixelRatio, setLabels |
 | **线类** | | |
 | Line | 线条 | style(solid/dashed/arrow), width, speed |
 | ODLine | OD线 | 起终点样式 |
 | PipeLine | 三维管线(圆管) | pipeline, colors, radius, radialSegments |
+| PixelLine | 像素线(固定像素宽度,万级批量) | width, color, texture, heightOffset, setData |
 | **面类** | | |
 | Polygon | 自定义区域 | fillStyle(Empty/Stripe/Matrix), height |
 | PolygonMesh | 高性能拉伸多边形 | brightness, opacity, per-feature properties |
@@ -409,6 +413,7 @@ assetLayer.addEventListener('mousedown', (e) => {
 | **数据加载** | | |
 | AssetLayer | 动态资产 | url, header, body (**必须先调用 setupModelInfo**) |
 | I3DTileLayer | 3DTiles数据 | url |
+| Dynamic3DTilesLayer | 动态3DTiles图层(运行时增删改多个) | data[{name,url,...}], addTilesets, removeTilesets |
 | UAVSwarm | 无人机集群(低空飞行) | data, trajectoryStyle, followById, viewChange, showLabels |
 | UAVGrid | 民航无人机网格(空域网格) | range, planeLevel, heightLevel, followTarget, setCellStyles |
 | MassUAV | 海量实时无人机(万级,WebSocket) | url, capacity, connect, select, follow |
@@ -474,10 +479,10 @@ assetLayer.addEventListener('mousedown', (e) => {
 - **`references/class-details.md`** - 类详细说明和参数
 
 ### 分类 API 参考
-- **`references/examples-core.md`** - 核心功能（相机导航、clickLocation、天气时间、3DTiles）
+- **`references/examples-core.md`** - 核心功能（相机导航、clickLocation、天气时间、3DTiles、动态3DTiles）
 - **`references/examples-base.md`** - 基础控制与数据加载
-- **`references/examples-markers-point.md`** - 点标记类
-- **`references/examples-markers-line.md`** - 线条类
+- **`references/examples-markers-point.md`** - 点标记类（含 DynamicIcon / MassiveImages / DynamicLabel 选型）
+- **`references/examples-markers-line.md`** - 线条类（含 PipeLine / PixelLine 选型）
 - **`references/examples-markers-shape.md`** - 几何形状类
 - **`references/examples-polygon-effects.md`** - 多边形与特效
 - **`references/examples-traffic.md`** - 交通行业与低空无人机(UAVSwarm/UAVGrid/MassUAV)

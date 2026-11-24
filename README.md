@@ -2,14 +2,14 @@
 
 > [中文版本 (Chinese Version)](./README_zh.md)
 
-> **Version**: 2.0.0
-> **Purpose**: Help Claude AI understand and use mapv-cloudrenderengine (Baidu Maps Cloud Rendering Engine) for 3D digital twin visualization development
+> **Version**: 2.1.0
+> **Purpose**: Help LLMs and AI coding assistants understand and use mapv-cloudrenderengine (Baidu Maps Cloud Rendering Engine) for 3D digital twin visualization development
 
 ---
 
 ## Overview
 
-This is a knowledge base skill designed for Claude AI assistant, enabling Claude to:
+This is a general-purpose knowledge base skill for cloud rendering development. It is not tied to any particular model or tool: Claude Code, Cursor, Codex, Windsurf, Trae, and other AI coding assistants that support Skills, Rules, or custom knowledge bases can load it, regardless of which LLM runs behind them. Once loaded, the AI can:
 
 - Guide developers in using the mapv-cloudrenderengine API
 - Generate complete, runnable 3D geographic visualization code
@@ -18,7 +18,7 @@ This is a knowledge base skill designed for Claude AI assistant, enabling Claude
 
 ### Use Cases
 
-Claude will automatically activate this skill when developers ask about:
+The AI assistant will automatically load this skill when developers ask about:
 
 - "use mapv-cloudrenderengine"
 - "create 3D visualization / map markers / trajectory lines / heatmaps"
@@ -46,8 +46,8 @@ Claude will automatically activate this skill when developers ask about:
 ## Directory Structure
 
 ```
-.claude/skills/cloudrenderengine/
-├── SKILL.md                    # Core knowledge base (Claude's main learning content)
+cloudrenderengine/
+├── SKILL.md                    # Core knowledge base (the AI's main learning content)
 │                               # Contains complete API docs, code templates, best practices
 │
 ├── examples/                   # Complete code examples
@@ -67,8 +67,8 @@ Claude will automatically activate this skill when developers ask about:
 
 ### File Purpose
 
-- **SKILL.md**: The core document Claude reads first, containing a summary of all key information
-- **examples/**: Provides complete runnable code examples to help Claude generate correct code
+- **SKILL.md**: The core document the AI reads first, containing a summary of all key information
+- **examples/**: Provides complete runnable code examples to help the AI generate correct code
 - **references/**: Detailed categorized reference docs for in-depth API queries
 
 ---
@@ -87,58 +87,48 @@ git clone git@github.com:baidu-maps/unreal-sdk-skills.git
 git clone https://github.com/baidu-maps/unreal-sdk-skills.git
 ```
 
-#### Step 2: Copy Skill to Configuration Directory
+#### Step 2: Put the Skill in Your AI Tool's Skill Directory
 
-**Option A: Configure as Global Skill (Recommended)**
+The skill is just the `cloudrenderengine/` directory in this repo (`SKILL.md` + `examples/` + `references/`) and does not depend on any specific tool. Place it where your tool expects it:
 
-Copy the Skill to the `.claude/skills/` directory under your home folder, making it available for all projects:
+| Tool | Global (all projects) | Project-level (current project only) |
+|------|----------------------|-------------------------------------|
+| Claude Code | `~/.claude/skills/` | `<project>/.claude/skills/` |
+| Other tools that support Agent Skills | The tool's global skills directory | The tool's project skills directory |
+| Cursor / Windsurf / Trae, etc. | Import the directory contents as custom Rules or a knowledge base; see each tool's docs for the path | Same |
+
+Example: global install for Claude Code
 
 ```bash
-# Create global skills directory (if not exists)
 mkdir -p ~/.claude/skills
-
-# Copy cloudrenderengine skill
-cp -r unreal-sdk-skills/.claude/skills/cloudrenderengine ~/.claude/skills/
+cp -r unreal-sdk-skills/cloudrenderengine ~/.claude/skills/
 ```
 
-**Option B: Configure as Project-Level Skill**
-
-Copy the Skill to a specific project's `.claude/skills/` directory, making it available only for that project:
+Project-level install:
 
 ```bash
-# Navigate to your project directory
 cd /path/to/your-project
-
-# Create project skills directory (if not exists)
 mkdir -p .claude/skills
-
-# Copy cloudrenderengine skill
-cp -r /path/to/unreal-sdk-skills/.claude/skills/cloudrenderengine .claude/skills/
+cp -r /path/to/unreal-sdk-skills/cloudrenderengine .claude/skills/
 ```
 
 #### Step 3: Verify Installation
 
-After installation, the directory structure should look like:
+After installation, the directory structure should look like this (Claude Code shown; other tools differ only in the outer directory):
 
 ```
-~/.claude/skills/                    # Global configuration
+~/.claude/skills/                    # or .claude/skills/ inside your project
 └── cloudrenderengine/
     ├── SKILL.md                     # Core knowledge base
     ├── examples/                    # Code examples
     └── references/                  # Reference documentation
-
-# Or
-
-your-project/.claude/skills/         # Project-level configuration
-└── cloudrenderengine/
-    ├── SKILL.md
-    ├── examples/
-    └── references/
 ```
+
+Type "initialize the cloud rendering engine" in the chat. If the AI returns complete code that uses `CloudRenderEngine`, the skill is working.
 
 ### Activation
 
-Simply mention relevant keywords in the conversation, and Claude will automatically use this skill. No special commands required.
+Simply mention relevant keywords in the conversation, and the AI assistant will automatically use this skill. No special commands required. If your tool does not auto-load skills by description, ask the AI explicitly to refer to `cloudrenderengine/SKILL.md`.
 
 ### Example Prompts
 
@@ -251,7 +241,7 @@ EventDispatcher
 ### How to Update This Skill
 
 1. **Update Core Documentation**
-   - Modify `SKILL.md`, this is Claude's main learning source
+   - Modify `SKILL.md`, this is the AI's main learning source
    - Maintain document structure: Installation → Core Concepts → API → Examples → Best Practices
 
 2. **Add New Examples**
@@ -268,7 +258,7 @@ EventDispatcher
 
 ### Version Information Location
 
-- **Current Version**: See `version: 2.0.0` at the top of `SKILL.md`
+- **Current Version**: See `version: 2.1.0` at the top of `SKILL.md`
 - **Changelog**: Currently inline in `SKILL.md`
 
 ### Documentation Writing Principles
@@ -290,7 +280,7 @@ EventDispatcher
 3. Consult categorized documents in `references/` as needed
 4. Reference code templates in `SKILL.md` for actual projects
 
-### For Claude AI
+### For AI Assistants
 
 - Prioritize reading `SKILL.md` to get the complete knowledge system
 - Locate specific documents in `references/` based on user questions

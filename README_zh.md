@@ -1,13 +1,13 @@
 # CloudRenderEngine Skill
 
-> **Version**: 2.0.0
-> **Purpose**: 帮助 Claude AI 理解和使用 mapv-cloudrenderengine（百度地图云渲染引擎）进行 3D 数字孪生可视化开发
+> **Version**: 2.1.0
+> **Purpose**: 帮助大模型和 AI 编程助手理解和使用 mapv-cloudrenderengine（百度地图云渲染引擎）进行 3D 数字孪生可视化开发
 
 ---
 
 ## Skill 简介
 
-这是一个专为 Claude AI 助手设计的知识库 skill，使 Claude 能够：
+这是一个通用的云渲染开发知识库 skill，不绑定任何特定大模型或工具。Claude Code、Cursor、Codex、Windsurf、Trae 等支持 Skill、Rules 或自定义知识库的 AI 编程助手都可以加载它，背后使用哪家大模型均可。加载后，AI 能够：
 
 - 指导开发者使用 mapv-cloudrenderengine API
 - 生成完整可运行的 3D 地理可视化代码
@@ -16,7 +16,7 @@
 
 ### 适用场景
 
-当开发者询问以下内容时，Claude 会自动激活此 skill：
+当开发者询问以下内容时，AI 助手会自动加载此 skill：
 
 - "使用 mapv-cloudrenderengine"
 - "创建 3D 可视化 / 地图标注 / 轨迹线 / 热力图"
@@ -45,8 +45,8 @@
 ## 目录结构说明
 
 ```
-.claude/skills/cloudrenderengine/
-├── SKILL.md                    # 核心知识库 (Claude 的主要学习内容)
+cloudrenderengine/
+├── SKILL.md                    # 核心知识库 (AI 的主要学习内容)
 │                               # 包含完整 API 文档、代码模板、最佳实践
 │
 ├── examples/                   # 完整代码示例
@@ -66,8 +66,8 @@
 
 ### 文件用途说明
 
-- **SKILL.md**: Claude 首先阅读的核心文档，包含所有关键信息的精华总结
-- **examples/**: 提供完整可运行的代码示例，帮助 Claude 生成正确的代码
+- **SKILL.md**: AI 首先阅读的核心文档，包含所有关键信息的精华总结
+- **examples/**: 提供完整可运行的代码示例，帮助 AI 生成正确的代码
 - **references/**: 详细的分类参考文档，用于深入查询特定 API 细节
 
 ---
@@ -86,58 +86,48 @@ git clone git@github.com:baidu-maps/unreal-sdk-skills.git
 git clone https://github.com/baidu-maps/unreal-sdk-skills.git
 ```
 
-#### 第二步：复制 Skill 到配置目录
+#### 第二步：把 Skill 放到 AI 工具的 Skill 目录
 
-**方式一：配置为全局 Skill（推荐）**
+Skill 本身就是仓库里的 `cloudrenderengine/` 目录（`SKILL.md` + `examples/` + `references/`），与具体工具无关。按你使用的工具放到对应位置即可：
 
-将 Skill 复制到用户目录下的 `.claude/skills/`，所有项目都可使用：
+| 工具 | 全局（所有项目可用） | 项目级（仅当前项目） |
+|------|---------------------|---------------------|
+| Claude Code | `~/.claude/skills/` | `<项目>/.claude/skills/` |
+| 其他支持 Agent Skills 的工具 | 该工具的全局 skills 目录 | 该工具的项目 skills 目录 |
+| Cursor / Windsurf / Trae 等 | 将目录内容作为自定义 Rules 或知识库引入，路径参考各工具文档 | 同左 |
+
+以 Claude Code 全局安装为例：
 
 ```bash
-# 创建全局 skills 目录（如果不存在）
 mkdir -p ~/.claude/skills
-
-# 复制 cloudrenderengine skill
-cp -r unreal-sdk-skills/.claude/skills/cloudrenderengine ~/.claude/skills/
+cp -r unreal-sdk-skills/cloudrenderengine ~/.claude/skills/
 ```
 
-**方式二：配置为项目级 Skill**
-
-将 Skill 复制到具体项目的 `.claude/skills/` 目录，仅该项目可使用：
+项目级安装：
 
 ```bash
-# 进入你的项目目录
 cd /path/to/your-project
-
-# 创建项目 skills 目录（如果不存在）
 mkdir -p .claude/skills
-
-# 复制 cloudrenderengine skill
-cp -r /path/to/unreal-sdk-skills/.claude/skills/cloudrenderengine .claude/skills/
+cp -r /path/to/unreal-sdk-skills/cloudrenderengine .claude/skills/
 ```
 
 #### 第三步：验证安装
 
-安装完成后，目录结构应如下：
+安装完成后，目录结构应如下（以 Claude Code 为例，其他工具只是外层目录不同）：
 
 ```
-~/.claude/skills/                    # 全局配置
+~/.claude/skills/                    # 或项目内 .claude/skills/
 └── cloudrenderengine/
     ├── SKILL.md                     # 核心知识库
     ├── examples/                    # 代码示例
     └── references/                  # 参考文档
-
-# 或
-
-your-project/.claude/skills/         # 项目级配置
-└── cloudrenderengine/
-    ├── SKILL.md
-    ├── examples/
-    └── references/
 ```
+
+在对话中输入「初始化云渲染引擎」，如果 AI 给出包含 `CloudRenderEngine` 的完整代码，说明已生效。
 
 ### 触发方式
 
-直接在对话中提及相关关键词，Claude 会自动使用这个 skill。无需特殊命令。
+直接在对话中提及相关关键词，AI 助手会自动使用这个 skill，无需特殊命令。不支持按描述自动加载的工具，可以在对话中明确要求 AI 参考 `cloudrenderengine/SKILL.md`。
 
 ### 典型提示词示例
 
@@ -177,7 +167,7 @@ your-project/.claude/skills/         # 项目级配置
 调度服务的地址是 http://127.0.0.1:8017，projectName 为 wxhs"
 ```
 > 触发关键词：**创建云渲染 demo**、**快速接入调度服务**、**生成云渲染项目**
-> 需提供 `调度服务地址` 和 `projectName`，缺少时 Claude 会主动询问。
+> 需提供 `调度服务地址` 和 `projectName`，缺少时 AI 会主动询问。
 > 自动检测当前项目框架（React / Vue），空目录默认生成 React 组件。
 
 ---
@@ -259,7 +249,7 @@ EventDispatcher
 ### 如何更新这个 Skill
 
 1. **更新核心文档**
-   - 修改 `SKILL.md`，这是 Claude 的主要学习来源
+   - 修改 `SKILL.md`，这是 AI 的主要学习来源
    - 保持文档结构：安装 → 核心概念 → API → 示例 → 最佳实践
 
 2. **添加新示例**
@@ -276,7 +266,7 @@ EventDispatcher
 
 ### 版本信息位置
 
-- **当前版本**: 查看 `SKILL.md` 顶部的 `version: 2.0.0`
+- **当前版本**: 查看 `SKILL.md` 顶部的 `version: 2.1.0`
 - **更新日志**: 目前在 `SKILL.md` 中内联说明
 
 ### 文档编写原则
@@ -298,7 +288,7 @@ EventDispatcher
 3. 根据需求查阅 `references/` 中的分类文档
 4. 在实际项目中参考 `SKILL.md` 的代码模板
 
-### 对于 Claude AI
+### 对于 AI 助手
 
 - 优先阅读 `SKILL.md` 获取完整知识体系
 - 根据用户问题定位到 `references/` 中的具体文档

@@ -32,11 +32,13 @@ import {
     Light,                  // 光源
     DynamicIcon,            // 大规模动态图标点
     MassiveImages,          // 大规模图片点位(共享图)
+    DynamicLabel,           // 大规模动态标签(canvas 自定义, 可移动)
 
     // 线类 (Line)
     Line,                   // 线
     ODLine,                 // OD线 (起点-终点)
     PipeLine,               // 三维管线(圆管)
+    PixelLine,              // 像素线(固定像素宽度)
     LargeRoadCondition,     // 大规模路况
 
     // 面类 (Polygon)
@@ -88,6 +90,7 @@ import {
 
     // 数据加载 (Data Loading)
     I3DTileLayer,           // 3DTiles数据
+    Dynamic3DTilesLayer,    // 动态3DTiles图层
     AssetLayer,             // 动态资产
     RoadPile,               // 动态路桩
     RoadDataManager,        // 高精动态数据
@@ -643,6 +646,48 @@ pipe.emissiveIntensity = 0.5;                         // 改发光强度(触发�
 
 **方法:** `setColors(colors,pipeID)`、`setColorByIndex(color,pipeID)`、`addPipe(pipeline)`、`removePipe(pipeID)`、`clear()`
 
+### PixelLine 像素线
+
+按经纬高数据批量绘制**固定像素宽度**的线，线宽不随相机远近变化。每条线可单独设颜色和宽度，整个图层可共用一张沿线重复的贴图，按上千到上万条线整批下发设计。关卡里需有覆盖该区域的 `AGeoReferencingSystem`，否则不创建任何线。
+
+```javascript
+const lines = new Engine.PixelLine({
+    width: 3,                       // 图层线宽(像素), 默认2
+    color: '#00A0FF',               // '#RRGGBB' / '#RRGGBBAA' 或 0~1 的 [r,g,b(,a)], 默认'#00A0FF'
+    emissiveIntensity: 1,           // 自发光倍率, 默认1, >1 更亮
+    texture: 'https://example.com/line/arrow.png', // 沿线重复贴图(URL/base64/cre-tex:), 默认''纯色
+    textureRepeat: 50,              // 贴图重复一次对应的地面长度(米), 默认100
+    heightOffset: 5,                // 每个点的高度附加值(米), 默认0
+    data: [                         // GeoJSON Feature 数组或 FeatureCollection
+        { type: 'Feature', geometry: { type: 'LineString', coordinates: [[116.39, 39.90, 10], [116.40, 39.91]] },
+          properties: { color: '#FF4040', width: 4 } },   // 单条线样式
+        { type: 'Feature', geometry: { type: 'MultiLineString', coordinates: [[[116.41, 39.90], [116.42, 39.92]]] } },
+    ],
+});
+engine.addToScene(lines);
+
+lines.width = 6;                    // 样式即时生效, 作用到所有线, 同帧多处修改合并下发
+lines.color = '#FF6600';
+lines.heightOffset = 20;            // 静默属性, 随下一次 setData 生效
+lines.setData(geojson);             // 全量替换线数据(可直接传 DataV 行政区 FeatureCollection)
+lines.clear();                      // 清空全部线, 保留样式
+```
+
+**PixelLine 参数:**
+| 参数 | 默认 | 说明 |
+|------|------|------|
+| `width` | 2 | 图层线宽(像素)，≤0 忽略 |
+| `color` | '#00A0FF' | 图层颜色 |
+| `emissiveIntensity` | 1 | 自发光倍率，负数按0 |
+| `texture` | '' | 沿线重复贴图；线色 = 线颜色 × 贴图颜色 |
+| `textureRepeat` | 100 | 贴图重复长度(米) |
+| `heightOffset` | 0 | 点高度附加值(米)，只随 setData 下发 |
+| `data` | [] | geometry 支持 LineString / MultiLineString / Polygon / MultiPolygon(面只画轮廓)；`properties.color/width` 为单线样式 |
+
+**方法:** `setData(data)` 全量替换、`clear()` 清空
+
+> 运行期修改 `width`/`color`/`emissiveIntensity`/`texture`/`textureRepeat` 即时生效不重建线，`width`/`color` 会覆盖所有线(含单线样式)直到下一次 `setData`。同帧内同时改图层样式和 `setData` 时，单线样式优先。
+
 ### IconPoint 图标点
 
 ```javascript
@@ -724,6 +769,7 @@ const layer = new Engine.DynamicIcon({
     imageUrl: 'https://x/uav.png',      // 默认图(URL或base64)
     size: [64, 64],                     // 默认宽高(px), 默认[64,64]
     scale: 1.0,                         // 默认缩放, 实际尺寸=size×scale
+    pivot: [0.5, 1],                    // 锚点[x,y], 左上[0,0]右下[1,1], 默认[0.5,0.5]; [0.5,1]=图片在点位上方
     defaultMoveMode: 'smooth',          // 'smooth' 平滑 | 'teleport' 瞬移
     smoothMoveDuration: 0.5,            // 平滑时长(秒)
     maxVisibleDistance: 1e8,            // 最大可见距离(厘米), 超出隐藏
@@ -750,6 +796,7 @@ layer.setImages([{ image: 'https://x/dji.png', id: [1, 2] }]);
 | `imageUrl` | string | '' | 默认图(URL或base64) |
 | `size` | [w,h] | [64,64] | 默认宽高(px) |
 | `scale` | number | 1.0 | 默认缩放 |
+| `pivot` | [x,y] | [0.5,0.5] | 图片对准点位的锚点，[0.5,1] 底边中点落在点位上；仅构造时传入 |
 | `defaultMoveMode` | string | 'smooth' | 平滑 / 瞬移 |
 | `smoothMoveDuration` | number | 0.5 | 平滑时长(秒) |
 | `maxVisibleDistance` | number | 1e8 | 最大可见距离(厘米) |
@@ -758,6 +805,39 @@ layer.setImages([{ image: 'https://x/dji.png', id: [1, 2] }]);
 | `data` | Array | [] | 点位 {id,lng,lat,alt?,imageUrl?,size?,scale?,customData?,moveMode?}，id/lng/lat 必填 |
 
 **方法:** `setPoints(points)` 更新点位(按 id diff)、`setImages(images)` 批量赋图 `[{image, id:[...]}]`
+
+### DynamicLabel 大规模动态标签
+
+继承自 `DynamicIcon`。每个标签用 `BasicLabel` 同款 `style` / `content` 在 canvas 上绘制成图片，再作为 DynamicIcon 点位图下发，因此复用 DynamicIcon 的按 id 增删与移动、平滑/瞬移、重叠避让、`pivot` 等能力，整个图层只占一个 UE 图层。适合大量可移动、内容完全自定义的标签（车辆牌照、人员名牌、设备状态卡片）。
+
+```javascript
+const layer = new Engine.DynamicLabel({
+    pivot: [0.5, 1],                // 底边中点对准点位, 标签显示在点位上方
+    declutter: false,
+    pixelRatio: 2,                  // 画布超采样倍数(只影响清晰度), 默认2, 仅构造时传入
+    data: [{
+        id: 1, lng: 116.397, lat: 39.908, alt: 30, customData: '{"name":"东门"}',
+        style: { width: 120, height: 38, backgroundColor: 'rgba(20,60,140,0.85)', borderRadius: 6 },
+        content: [{ textList: [{ text: '东门', fontSize: 16, color: '#fff', position: [12, 10], fontFamily: 'sans-serif' }] }],
+    }],
+});
+engine.addToScene(layer);
+layer.addEventListener('contentLoaded', () => console.log('标签绘制完成'));
+
+// 全量更新(按 id 快照: 不在数组里的 id 删除); 内容没变的标签不重画、不重发图片
+await layer.setLabels([
+    { id: 1, lng: 116.3972, lat: 39.9083, alt: 30, style: style1, content: content1, customData: '{"name":"东门"}' },
+    { id: 2, lng: 116.3993, lat: 39.9091, alt: 30, style: style2, content: content2 },
+]);
+```
+
+**参数:** 除 `pixelRatio`、`data` 外，`size`/`scale`/`pivot`/`defaultMoveMode`/`smoothMoveDuration`/`maxVisibleDistance`/`declutter`/`declutterMargin`/`visible` 同 DynamicIcon；**不支持默认图 `imageUrl`**。
+
+**标签字段:** `{id, lng, lat, alt?, style, content?, scale?, customData?, moveMode?}`，`id/lng/lat/style` 必填；`style`、`content` 格式同 BasicLabel 构造参数。显示尺寸等于 `style.width × style.height`（不会把宽度取到 2 的幂）。
+
+**方法:** `setLabels(labels)` 返回 `Promise<boolean>`，绘制全部完成后才更新点位并派发 `contentLoaded`；连续调用只应用最后一次（被取代的返回 `false`）。不支持 `setPoints` / `setImages`。
+
+> 每次 `setLabels` 都要带上标签全部字段（scale、customData 等），未带的字段在 UE 端回退默认值。`style` 缺有效宽高的标签跳过；背景图加载失败时新标签跳过、已有标签沿用上次的图。
 
 ### MassiveImages 大规模图片点位
 
@@ -768,6 +848,7 @@ const images = new Engine.MassiveImages({
     image: 'https://example.com/poi.png', // 共享图(URL或base64), 所有点位共用
     size: [48, 48],                 // 屏幕尺寸[宽,高]px, 默认[64,64](UE 当前按 size[0] 正方形)
     scale: 1,                       // 尺寸倍率, 实际边长=size[0]×scale
+    pivot: [0.5, 1],                // 锚点[x,y], 默认[0.5,0.5]; [0.5,1]=图片在点位上方, 鼠标命中范围随之偏移
     declutter: true,                // 重叠剔除, 保留离相机最近点位
     declutterMargin: 10,            // 重叠判定外扩(px, 可负)
     declutterHz: 10,                // 屏幕投影刷新频率(次/秒, ≤0 每帧)
@@ -792,6 +873,7 @@ images.visible = false;
 | `image` | '' | 共享图(URL或base64) |
 | `size` | [64,64] | 屏幕尺寸[宽,高]px(当前用 size[0]) |
 | `scale` | 1 | 尺寸倍率 |
+| `pivot` | [0.5,0.5] | 锚点[x,y]，仅构造时传入；需 UE 图标材质接好 IconPivot 参数，否则按中心显示 |
 | `declutter` | true | 重叠剔除 |
 | `declutterMargin` | 10 | 重叠外扩(px，可负) |
 | `declutterHz` | 10 | 投影刷新(次/秒，≤0每帧) |
@@ -1532,6 +1614,46 @@ new I3DTileLayer({
     scale: { x, y, z },
 });
 ```
+
+### Dynamic3DTilesLayer 动态3DTiles图层
+
+运行时按 `name + url` 动态创建、更新、显隐和移除**一组** 3DTiles（倾斜摄影、精模、管线等），一个图层可包含多个 3DTiles，各自设置高度偏移、清晰度、碰撞与显隐。关卡里需有 `ACesiumGeoreference`，否则模型位置不对；加载失败时 UE 打 Warning（含 HTTP 状态码与 url），不自动重试。
+
+```javascript
+const tilesLayer = new Engine.Dynamic3DTilesLayer({
+    data: [
+        { name: 'building', url: 'https://example.com/building/tileset.json', heightOffset: 2 },
+        { name: 'terrain', url: 'https://example.com/terrain/tileset.json', visible: false, enableCollision: false },
+        { name: 'pipe', url: 'file:///D:/data/pipe/tileset.json', maximumScreenSpaceError: 8 },
+    ],
+});
+engine.addToScene(tilesLayer);
+
+// 以下修改在下一帧合并为一条消息下发, UE 按 name 全量同步, url 没变的不重新加载
+tilesLayer.addTilesets({ name: 'road', url: 'https://example.com/road/tileset.json' }); // 新增
+tilesLayer.addTilesets({ name: 'building', heightOffset: -1.5 });   // 只改字段, 不重新加载
+tilesLayer.setTilesetsVisible(['terrain'], true);                   // 单个 3DTiles 显隐
+tilesLayer.removeTilesets(['pipe']);                                // 移除并释放瓦片
+tilesLayer.setTilesets([{ name: 'building', url: '...' }]);        // 全量替换(列表外的移除)
+tilesLayer.clearTilesets();                                         // 清空, 保留图层
+
+tilesLayer.visible = false;          // 整个图层显隐
+engine.destoryObject(tilesLayer);    // 移除图层及全部 3DTiles
+```
+
+**3DTiles 字段:**
+| 字段 | 默认 | 说明 |
+|------|------|------|
+| `name` | 必填 | 图层内唯一，区分大小写 |
+| `url` | 新建时必填 | tileset.json 地址，`http(s)://` 或 `file:///` |
+| `visible` | true | 该 3DTiles 自己的显隐；实际显示 = 图层显隐 && 自己的显隐 |
+| `heightOffset` | 0 | 高度偏移(米，可为负)，离地理参考原点越远水平偏差越大 |
+| `maximumScreenSpaceError` | 16 | 清晰度，越小越清晰越耗资源 |
+| `enableCollision` | true | 是否生成物理网格；关掉后点选/贴地打不到它，修改后重新加载 |
+
+**方法:** `setTilesets(list)` 全量替换（已存在的没写字段恢复默认）、`addTilesets(list)` 新增或只改出现的字段、`removeTilesets(names)`、`setTilesetsVisible(names, visible)`、`clearTilesets()`
+
+> 隐藏时暂停瓦片加载并关闭碰撞，已加载瓦片仍在内存；要释放内存用 `removeTilesets`。字段类型不对会被忽略并在控制台提示。与 `I3DTileLayer`（单个 3DTiles）及 `engine.enable3DTilesByName`（控制场景内置 3DTiles）不同，本类用于运行时管理多个外部 3DTiles。
 
 ### AssetLayer 动态资产
 

@@ -475,3 +475,70 @@ pipe.emissiveIntensity = 0.5;
 | `visible` | boolean | true | 显隐 |
 
 > **注意**: `colors` / `pipeline` / `color` / `radius` / `radialSegments` / `pipeID` 为静默属性，直接赋值只改值不触发更新，需配合 `option` 或 `emissiveIntensity` 的修改一并下发。PipeID 也可由前端自增维护(0,1,2,…)。
+
+---
+
+## PixelLine 像素线（固定像素宽度，万级批量）
+
+按经纬高数据批量绘制**固定像素宽度**的线，线宽不随相机远近变化。每条线可以有自己的颜色和宽度，整个图层可共用一张沿线重复的贴图，按上千到上万条线整批下发设计。适合行政区边界、路网描边、大批量轨迹。
+
+**选型:** 需要按米计宽、带流动/立体效果 → `Line`；需要三维圆管 → `PipeLine`；需要远近都一样粗、数量很大 → `PixelLine`。
+
+```javascript
+import { PixelLine } from 'mapv-cloudrenderengine';
+
+const lines = new PixelLine({
+    width: 3,                       // 图层线宽(像素), 默认2
+    color: '#00A0FF',               // '#RRGGBB' / '#RRGGBBAA' 或 0~1 的 [r,g,b(,a)]
+    emissiveIntensity: 1,           // 自发光倍率, 默认1, >1 更亮, <1 变暗
+    texture: 'https://example.com/line/arrow.png', // 沿线重复贴图, 默认''纯色
+    textureRepeat: 50,              // 贴图重复一次对应的地面长度(米), 默认100
+    heightOffset: 5,                // 每个点的高度附加值(米), 数据只有经纬度时用它抬离地面
+    data: [
+        {
+            type: 'Feature',
+            geometry: { type: 'LineString', coordinates: [[116.39, 39.90, 10], [116.40, 39.91]] },
+            properties: { color: '#FF4040', width: 4 },   // 本条线自己的样式
+        },
+        {
+            type: 'Feature',
+            geometry: { type: 'MultiLineString', coordinates: [[[116.41, 39.90], [116.42, 39.92]], [[116.43, 39.90], [116.44, 39.91]]] },
+        },
+    ],
+});
+
+engine.addToScene(lines);
+```
+
+**运行期更新:**
+
+```javascript
+// 样式即时生效, 不重建线; 同一帧内的修改合并为一条消息
+lines.width = 6;
+lines.color = '#FF6600';            // width/color 作用到所有线(含单线样式), 直到下一次 setData
+lines.color = '#00A0FF80';          // 半透明
+lines.emissiveIntensity = 0.6;      // 调暗
+lines.texture = '';                 // 去掉贴图恢复纯色
+
+// 替换线数据(行政区边界可直接传 DataV 的 FeatureCollection)
+lines.heightOffset = 20;            // 静默属性, 随下一次 setData 生效
+lines.setData(geojson);
+lines.clear();                      // 清空全部线, 保留样式和贴图
+
+lines.visible = false;
+engine.destoryObject(lines);
+```
+
+**PixelLine 参数:**
+| 参数 | 默认 | 说明 |
+|------|------|------|
+| `width` | 2 | 图层线宽(像素)，≤0 忽略 |
+| `color` | '#00A0FF' | 图层颜色，A 为不透明度 |
+| `emissiveIntensity` | 1 | 自发光倍率，负数按0 |
+| `texture` | '' | 沿线重复贴图(URL/base64/cre-tex:)；线色 = 线颜色 × 贴图色，下载失败保持当前贴图 |
+| `textureRepeat` | 100 | 贴图重复一次的地面长度(米) |
+| `heightOffset` | 0 | 每个点的高度附加值(米)，只随 setData 下发 |
+| `data` | [] | Feature 数组或 FeatureCollection；geometry 支持 LineString / MultiLineString / Polygon / MultiPolygon(面只画轮廓) |
+| `visible` | true | 显隐 |
+
+> **注意**: 单线样式只认 `properties.color` / `properties.width`，其余 properties（如行政区 name、adcode）不下发。关卡里需有覆盖该区域的 `AGeoReferencingSystem`，否则 UE 不创建任何线。

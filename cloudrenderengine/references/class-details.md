@@ -199,7 +199,7 @@ new Light({
 
 继承自 Object3D。动态大规模图标点，基于 id 做点位增删与移动 diff，支持每点单独设置图片/尺寸/缩放、平滑(smooth)或瞬移(teleport)两种移动模式、屏幕重叠避让(declutter)。适合无人机群、车队等大规模动态点位。
 
-**构造参数:** `imageUrl`(默认图) `size`([w,h]) `scale` `defaultMoveMode` `smoothMoveDuration` `maxVisibleDistance` `declutter` `declutterMargin` `data`(初始点位) `visible`
+**构造参数:** `imageUrl`(默认图) `size`([w,h]) `scale` `pivot`(锚点[x,y],默认[0.5,0.5],仅构造时) `defaultMoveMode` `smoothMoveDuration` `maxVisibleDistance` `declutter` `declutterMargin` `data`(初始点位) `visible`
 
 ```javascript
 new DynamicIcon({
@@ -219,11 +219,32 @@ new DynamicIcon({
 
 > 运行期仅 `setPoints` / `setImages` 触发更新；其余属性构造后赋值只静默改值，随下一次更新一并下发。每点位字段 {id,lng,lat,alt?,imageUrl?,size?,scale?,customData?,moveMode?}，id/lng/lat 必填。
 
+### DynamicLabel 大规模动态标签
+
+继承自 DynamicIcon。每个标签用 BasicLabel 同款 `style`/`content` 在 canvas 上绘制成图片，再作为 DynamicIcon 点位图下发，复用按 id 增删移动、平滑/瞬移、重叠避让、`pivot` 等能力，整个图层只占一个 UE 图层。适合大量可移动、内容完全自定义的标签。
+
+**构造参数:** `pixelRatio`(画布超采样,默认2,仅构造时) `data`(初始标签数组) 及 DynamicIcon 的 `size/scale/pivot/defaultMoveMode/smoothMoveDuration/maxVisibleDistance/declutter/declutterMargin/visible`；不支持 `imageUrl`
+
+```javascript
+new DynamicLabel({
+    pivot: [0.5, 1],
+    data: [{
+        id: 1, lng: 116.397, lat: 39.908, alt: 30,
+        style: { width: 120, height: 38, backgroundColor: 'rgba(20,60,140,0.85)', borderRadius: 6 },
+        content: [{ textList: [{ text: '东门', fontSize: 16, color: '#fff', position: [12, 10] }] }],
+    }],
+});
+```
+
+**关键方法:** `setLabels(labels)` 全量更新（按 id 快照），返回 `Promise<boolean>`；内容没变的标签不重画，绘制完成后派发 `contentLoaded`。不支持 `setPoints` / `setImages`。
+
+> 每项 `{id,lng,lat,alt?,style,content?,scale?,customData?,moveMode?}`，`id/lng/lat/style` 必填；每次需带全部字段。显示尺寸 = `style.width × style.height`。
+
 ### MassiveImages 大规模图片点位
 
 继承自 Object3D。用一张共享图片批量渲染屏幕朝向的图标，支持重叠剔除(declutter)和鼠标事件，适合数千级同图标点位（UE 按 2000 以内设计）。所有点位共用同一张图与尺寸配置。
 
-**构造参数:** `image`(共享图 URL/base64) `size`([宽,高]px,默认[64,64]) `scale` `declutter`(重叠剔除) `declutterMargin` `declutterHz`(投影刷新频率) `maxVisibleDistance`(米) `data`([{id,lng,lat,alt?}]) `visible`
+**构造参数:** `image`(共享图 URL/base64) `size`([宽,高]px,默认[64,64]) `scale` `pivot`(锚点[x,y],默认[0.5,0.5],仅构造时) `declutter`(重叠剔除) `declutterMargin` `declutterHz`(投影刷新频率) `maxVisibleDistance`(米) `data`([{id,lng,lat,alt?}]) `visible`
 
 ```javascript
 new MassiveImages({
@@ -361,6 +382,27 @@ new PipeLine({
 **关键方法:** `setColors(colors, pipeID)` 批量分段着色、`setColorByIndex(color, pipeID)` 按索引改单段、`addPipe(pipeline)` 追加管线、`removePipe(pipeID)` 移除、`clear()` 清空。
 
 > PipeID 由 UE 在管线创建完成后通过 `createFinished` 事件回传（`content.pipelineID`），也可前端自增维护。运行期仅修改 `option` / `emissiveIntensity` 触发更新，其余属性静默改值需配合下发。
+
+### PixelLine 像素线
+
+继承自 Object3D。按经纬高批量绘制固定像素宽度的线，线宽不随相机远近变化；每条线可单独设颜色/宽度，图层可共用一张沿线重复的贴图，按上千到上万条线整批下发设计。适合行政区边界、路网、大批量轨迹。关卡需有覆盖该区域的 `AGeoReferencingSystem`。
+
+**构造参数:** `width`(像素,默认2) `color`('#00A0FF') `emissiveIntensity`(1) `texture`(沿线贴图) `textureRepeat`(重复长度米,默认100) `heightOffset`(米,默认0) `data`(GeoJSON Feature 数组或 FeatureCollection) `visible`
+
+```javascript
+new PixelLine({
+    width: 3,
+    color: '#00A0FF',
+    data: [
+        { type: 'Feature', geometry: { type: 'LineString', coordinates: [[116.39, 39.90], [116.40, 39.91]] },
+          properties: { color: '#FF4040', width: 4 } },
+    ],
+});
+```
+
+**关键方法:** `setData(data)` 全量替换线数据（携带当前 heightOffset）、`clear()` 清空。
+
+> geometry 支持 LineString / MultiLineString / Polygon / MultiPolygon（面只画轮廓）；`properties.color/width` 为单线样式，其余 properties 不下发。运行期改样式属性即时生效不重建线，`width`/`color` 作用到所有线直到下一次 `setData`；`heightOffset` 只随 `setData` 生效。
 
 ## 面类详解
 
@@ -759,6 +801,25 @@ engine.addEventListener('customResponse', (res) => {
 **方法:** `showCross(crossId)` 切换路口、`disconnect()` 断开连接、`reconnect()` 重新连接。
 
 ## 数据加载类详解（补充）
+
+### Dynamic3DTilesLayer 动态3DTiles图层
+
+继承自 Object3D。运行时按 `name + url` 动态创建、更新、显隐和移除一组 3DTiles（倾斜摄影、精模、管线等），每个 3DTiles 可单独设高度偏移、清晰度、碰撞与显隐。关卡需有 `ACesiumGeoreference`。
+
+**构造参数:** `data`(3DTiles 数组，每项 `{name, url, visible?, heightOffset?, maximumScreenSpaceError?, enableCollision?}`) `visible`
+
+```javascript
+new Dynamic3DTilesLayer({
+    data: [
+        { name: 'building', url: 'https://example.com/building/tileset.json', heightOffset: 2 },
+        { name: 'terrain', url: 'https://example.com/terrain/tileset.json', visible: false, enableCollision: false },
+    ],
+});
+```
+
+**关键方法:** `setTilesets(list)` 全量替换、`addTilesets(list)` 新增或局部更新、`removeTilesets(names)` 移除并释放、`setTilesetsVisible(names, visible)` 单个显隐、`clearTilesets()` 清空。
+
+> 同一帧内的多次调用合并为一条消息，UE 按 name 全量同步，url 没变的不重新加载。`name` 必填且图层内唯一；新建时必须带 `url`。默认 `maximumScreenSpaceError: 16`、`enableCollision: true`。
 
 ### PersonLine 数字人轨迹线
 

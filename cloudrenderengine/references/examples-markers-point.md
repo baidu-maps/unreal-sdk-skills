@@ -464,6 +464,7 @@ const layer = new DynamicIcon({
     imageUrl: 'https://example.com/uav.png', // 默认图(URL或base64), 点位未带图时使用
     size: [64, 64],                          // 默认宽高(px), 默认[64,64]
     scale: 1.0,                              // 默认缩放, 实际尺寸=size×scale
+    pivot: [0.5, 1],                         // 锚点[x,y], 默认[0.5,0.5]中心; [0.5,1]=底边中点落在点位, 图片在点位上方
     defaultMoveMode: 'smooth',               // 默认移动模式 'smooth'|'teleport'
     smoothMoveDuration: 0.5,                 // 平滑移动时长(秒)
     maxVisibleDistance: 1e8,                 // 最大可见距离(厘米), 超出隐藏
@@ -516,6 +517,7 @@ layer.setImages([
 | `imageUrl` | string | '' | 默认图(URL或base64) |
 | `size` | [w,h] | [64,64] | 默认宽高(px) |
 | `scale` | number | 1.0 | 默认缩放 |
+| `pivot` | [x,y] | [0.5,0.5] | 锚点，左上[0,0]右下[1,1]，对所有点生效，仅构造时传入 |
 | `defaultMoveMode` | string | 'smooth' | 平滑/瞬移 |
 | `smoothMoveDuration` | number | 0.5 | 平滑时长(秒) |
 | `maxVisibleDistance` | number | 1e8 | 最大可见距离(厘米) |
@@ -541,6 +543,7 @@ const images = new MassiveImages({
     image: 'https://example.com/poi.png', // 共享图(URL或base64), 所有点位共用
     size: [48, 48],                 // 屏幕尺寸[宽,高]px(UE 当前按 size[0] 正方形)
     scale: 1,                       // 尺寸倍率, 实际边长=size[0]×scale
+    pivot: [0.5, 1],                // 锚点, 默认[0.5,0.5]; 需 UE 图标材质接好 IconPivot 参数
     declutter: true,                // 重叠剔除, 保留离相机最近点位
     declutterMargin: 10,            // 重叠判定外扩(px, 可负)
     declutterHz: 10,                // 屏幕投影刷新频率(次/秒, ≤0 每帧)
@@ -579,6 +582,7 @@ images.visible = false; // 隐藏时不派发鼠标事件
 | `image` | '' | 共享图(URL或base64) |
 | `size` | [64,64] | 屏幕尺寸[宽,高]px(当前用 size[0] 正方形) |
 | `scale` | 1 | 尺寸倍率 |
+| `pivot` | [0.5,0.5] | 锚点，鼠标命中范围随之偏移，仅构造时传入 |
 | `declutter` | true | 重叠剔除(保留最近) |
 | `declutterMargin` | 10 | 重叠判定外扩(px，可负) |
 | `declutterHz` | 10 | 投影刷新频率(次/秒，≤0每帧) |
@@ -589,3 +593,60 @@ images.visible = false; // 隐藏时不派发鼠标事件
 | `visible` | true | 显隐 |
 
 > **注意**: 运行期仅 `updateList`(换点位)、`updateImg`(换共享图)、`setCluster`(开关聚合)、`setDepthTest`(开关遮挡) 触发更新；同一帧多次操作只下发最后一个 option，需跨帧分别更新。点位重复 id 取最后一项，非法点位 UE 跳过。点聚合样式 `cluster*`(clusterRadius/clusterFontSize/clusterTextColor/clusterOutlineColor/clusterOutlineSize/clusterLabelOffsetY/clusterMaxLabels) 仅构造时传入、构造后只读。
+
+---
+
+## DynamicLabel 大规模动态标签（完全自定义、可移动）
+
+每个标签用 `BasicLabel` 同款 `style` / `content` 在 canvas 上绘制，再作为 `DynamicIcon` 的点位图片下发，所以能像 DynamicIcon 一样按 id 增删、平滑移动、重叠避让，整个图层只占一个 UE 图层。适合车辆牌照、人员名牌、设备状态卡片等大量可移动标签。
+
+**选型:** 标签内容固定、数量少 → `BasicLabel`；同图标大批量 → `MassiveImages`；每点不同图片且要移动 → `DynamicIcon`；每点内容自定义且要移动 → `DynamicLabel`。
+
+```javascript
+import { DynamicLabel } from 'mapv-cloudrenderengine';
+
+const labelStyle = { width: 120, height: 38, backgroundColor: 'rgba(20,60,140,0.85)', borderRadius: 6 };
+const makeContent = text => [{
+    textList: [{ text, fontSize: 16, color: '#fff', position: [12, 10], fontFamily: 'sans-serif' }],
+}];
+
+const layer = new DynamicLabel({
+    pivot: [0.5, 1],            // 底边中点对准点位, 标签显示在点位上方
+    declutter: false,           // 关闭重叠避让, 全部显示
+    pixelRatio: 2,              // 画布超采样倍数, 只影响清晰度, 默认2
+    data: [
+        { id: 1, lng: 116.397, lat: 39.908, alt: 30, style: labelStyle, content: makeContent('东门'), customData: '{"name":"东门"}' },
+        { id: 2, lng: 116.399, lat: 39.909, alt: 30, style: labelStyle, content: makeContent('西门') },
+    ],
+});
+
+layer.addEventListener('contentLoaded', () => console.log('标签绘制完成'));
+engine.addToScene(layer);
+```
+
+**运行期更新（全量快照，按 id diff）:**
+
+```javascript
+// 只改位置: 内容没变, 不重画、不重发图片
+await layer.setLabels([
+    { id: 1, lng: 116.3972, lat: 39.9083, alt: 30, style: labelStyle, content: makeContent('东门'), customData: '{"name":"东门"}' },
+    { id: 2, lng: 116.3993, lat: 39.9091, alt: 30, style: labelStyle, content: makeContent('西门') },
+]);
+
+// 改 id 2 的文字: 只重画 id 2; 不在数组里的 id 会被删除
+const applied = await layer.setLabels([
+    { id: 1, lng: 116.3972, lat: 39.9083, alt: 30, style: labelStyle, content: makeContent('东门'), customData: '{"name":"东门"}' },
+    { id: 2, lng: 116.3993, lat: 39.9091, alt: 30, style: labelStyle, content: makeContent('西门(关闭)') },
+]);
+// applied 为 false 表示被之后的 setLabels 取代或图层已释放
+```
+
+**标签字段:**
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `id` / `lng` / `lat` | 是 | 标识与位置 |
+| `style` | 是 | 同 BasicLabel 的 style，必须有有效的 `width` / `height`；显示尺寸即该宽高 |
+| `content` | 否 | 同 BasicLabel 的 content |
+| `alt` / `scale` / `customData` / `moveMode` | 否 | 同 DynamicIcon 点位字段 |
+
+> **注意**: 每次 `setLabels` 都要带上标签的全部字段，未带的字段（如 scale、customData）在 UE 端回退默认值。不支持 `setPoints` / `setImages` / 默认图 `imageUrl`。背景图跨域或加载失败时，新标签被跳过、已有标签沿用上次的图，控制台会告警。
